@@ -2,6 +2,7 @@ global long_mode_start
 global halt_wrapper
 global VGA_clear
 global VGA_display_char
+global VGA_display_str
 
 extern kmain
 
@@ -43,6 +44,8 @@ LOOP_START:
     ret
 
 VGA_display_char:
+    ; preserve rax
+    push rax
     ; load the current vga buffer pointer
     mov rax, [vga_buf_cur]
 
@@ -60,25 +63,53 @@ VGA_display_char:
     ; save the current terminal position
     mov [vga_buf_cur], rax
 
+disp_char_end:
+    ; restore rax
+    pop rax
     ret
 
 VGA_print_newline:
+    ; set rbx to every newline until that address is past
+    ; the current buffer pointer
+    ; then set the current buffer pointer to the rbx
     mov rbx, [vga_buf_beg]
 nl_loop:
-    add rbx, [vga_buf_line_len]
+    add byte rbx, [vga_buf_line_len]
     cmp rbx, rax
     jna nl_loop
 
     mov [vga_buf_cur], rbx
-    ret
+    jmp disp_char_end
 
 VGA_display_str:
+    ; preserve registers
+    push rax
+
+    mov rax, rdi
+disp_loop:
+    ; grab the character from the current string pointer
+    mov rdi, [rax]
+    and rdi, 0xff
+    
+    ; check for null terminator
+    cmp rdi, 0
+    
+    ; if null terminator, finish the routine
+    je disp_end
+
+    ; else print the character
+    call VGA_display_char
+    inc rax
+    jmp disp_loop
+disp_end:
+    pop rax
+    ret
 
 section .data
 bits 64
 vga_buf_beg DQ 0xb8000
 vga_buf_cur DQ 0xb8000
-vga_buf_line_len DB 0xA0
+vga_buf_line_len DQ 0xa0
 vga_char_len DD 0x2
 white_on_black DD 0x0700
 newline_char DB 0x0a

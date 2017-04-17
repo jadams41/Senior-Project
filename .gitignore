@@ -1,0 +1,12 @@
+#all files in the build folder
+os/build
+os/build/*
+
+#all object files
+*.o
+
+#all binary files
+*.bin
+
+#all stupid emacs autosave files
+*~

@@ -11,7 +11,7 @@ assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
 c_source_files := $(wildcard src/arch/$(arch)/*.c)
 c_object_files := $(patsubst src/arch/$(arch)/%.c, \
 	build/arch/$(arch)/%.o, $(c_source_files))
-symbol_link_file := symbol.iso
+symbol_link_file := symbol.bin
 
 .PHONY: all clean run iso
 
@@ -19,7 +19,7 @@ all: $(kernel)
 
 clean:
 	@rm -rf build
-	@rm symbol_link_file
+	-rm $(symbol_link_file)
 
 run: $(iso)
 	@qemu-system-x86_64 -s -cdrom $(iso)
