@@ -4,6 +4,9 @@ global VGA_clear
 global VGA_display_char
 global VGA_display_str
 
+global outb
+global inb
+
 extern kmain
 
 section .text
@@ -103,6 +106,14 @@ disp_loop:
     jmp disp_loop
 disp_end:
     pop rax
+    ret
+
+inb:
+    mov eax, [rdi]
+    ret
+
+outb:
+    mov [rsi], rdi
     ret
 
 section .data
