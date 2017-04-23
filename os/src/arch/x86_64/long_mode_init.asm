@@ -47,13 +47,23 @@ LOOP_START:
     ret
 
 VGA_display_char:
-    ; preserve rax
+    ; preserve rax & rbx
     push rax
+    push rbx
+
     ; load the current vga buffer pointer
     mov rax, [vga_buf_cur]
+    
+    ; check if the character is a backspace
+    mov rbx, [backspace_char]
+    and rbx, 0x00ff
+    cmp rdi, rbx
+    je VGA_backspace
 
     ; check if the character is a newline
-    cmp rdi, [newline_char]
+    mov rbx, [newline_char]
+    and rbx, 0x00ff
+    cmp rdi, rbx
     je VGA_print_newline
 
     ; format the register of the input variable to be white
@@ -68,8 +78,22 @@ VGA_display_char:
 
 disp_char_end:
     ; restore rax
+    pop rbx
     pop rax
     ret
+
+VGA_backspace:
+    cmp rax, [vga_buf_beg]
+    je disp_char_end
+
+    dec rax
+    dec rax
+
+    mov word [rax], 0x0000
+
+    mov [vga_buf_cur], rax
+
+    jmp disp_char_end
 
 VGA_print_newline:
     ; set rbx to every newline until that address is past
@@ -108,13 +132,13 @@ disp_end:
     pop rax
     ret
 
-inb:
-    mov eax, [rdi]
-    ret
+; inb:
+;     mov eax, [rdi]
+;     ret
 
-outb:
-    mov [rsi], rdi
-    ret
+; outb:
+;     mov [rsi], rdi
+;     ret
 
 section .data
 bits 64
@@ -122,5 +146,7 @@ vga_buf_beg DQ 0xb8000
 vga_buf_cur DQ 0xb8000
 vga_buf_line_len DQ 0xa0
 vga_char_len DD 0x2
-white_on_black DD 0x0700
+white_on_black DQ 0x0700
 newline_char DB 0x0a
+backspace_char DB 0x08
+cursor_char DQ 0x075f
