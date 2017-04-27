@@ -1,7 +1,12 @@
 #ifndef PRINTK
 #define PRINTK
 
-void prinkt(const char *fmtStr, ...);
+extern void halt_wrapper();
+extern void VGA_clear();
+extern void VGA_display_char(char);
+extern void VGA_display_str(const char *);
+
+void printk(const char *fmtStr, ...);
 void vgaDispCharTest();
 void printkTest();
 

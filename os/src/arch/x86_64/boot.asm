@@ -1,4 +1,5 @@
 global start
+global _idt
 extern long_mode_start
 
 section .text
@@ -16,10 +17,6 @@ start:
     lgdt [gdt64.pointer]
 
     jmp gdt64.code:long_mode_start
-	;; print OK to the screen
-    ; mov dword [0xb8000], 0x2f4b2f4f
-    ; mov dword [0xb8004], 0x2d4b2f4f
-    ; mov dword [0xb8008], 0x2d4b2f4f
 
 	hlt
 
@@ -142,6 +139,7 @@ enable_paging:
 
     ret
 
+
 section .bss
 align 4096
 p4_table:
@@ -155,6 +153,12 @@ stack_bottom:
 stack_top:
 
 section .rodata
+idt_48:
+    dw 0
+    dw 0,0
+
+_idt:   resb 256
+
 gdt64:
     dq 0 ; zero entry
 .code: equ $ - gdt64

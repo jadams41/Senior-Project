@@ -22,7 +22,7 @@ clean:
 	-rm $(symbol_link_file)
 
 run: $(iso)
-	@qemu-system-x86_64 -s -cdrom $(iso)
+	@qemu-system-x86_64 -monitor stdio -s -cdrom $(iso)
 
 iso: $(iso)
 
@@ -45,4 +45,4 @@ build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 #compile c files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.c
 	@mkdir -p $(shell dirname $@)
-	@$(CC) -c -g $< -o $@
+	@$(CC) -c -g $< -o $@ -Wall -Werror

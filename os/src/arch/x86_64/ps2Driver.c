@@ -1,4 +1,5 @@
 #include "ps2Driver.h"
+#include "printk.h"
 #include <stdint-gcc.h>
 
 #define PS2_CMD_CONF 0x20
@@ -7,6 +8,9 @@
 #define PS2_STATUS PS2_CMD
 #define PS2_STATUS_OUTPUT 1
 #define PS2_STATUS_INPUT (1 << 1)
+#define CMD_PORT 0x64
+#define DATA_PORT 0x60
+#define BUFF_SIZE 10
 
 uint8_t left_shift_pressed = 0;
 uint8_t right_shift_pressed = 0;
@@ -123,10 +127,14 @@ void initialize_shift_down_dict(){
 	shift_down_dict['/'] = '?';
 }
 
+char getCharFromScan(int scan){
+	return scancode_dict[scan];
+}
+
 // extern void outb(unsigned char value, unsigned short int port);
 // extern unsigned char inb(unsigned short int port);
 
-void inline outb(uint8_t val, uint16_t port) {
+void inline outb(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
@@ -136,147 +144,308 @@ uint8_t inline inb(uint16_t port) {
     return val;
 }
 
-struct ps2_config {
-	unsigned int interrupt1:1;
-	unsigned int interrupt2:1;
-	unsigned int systemFlag:1;
-	unsigned int zero:1;
-	unsigned int port1clk:1;
-	unsigned int port2clk:1;
-	unsigned int translation:1;
-	unsigned int zero2:1;
-} __attribute__((packed));
+// struct ps2_config {
+// 	unsigned int interrupt1:1;
+// 	unsigned int interrupt2:1;
+// 	unsigned int systemFlag:1;
+// 	unsigned int zero:1;
+// 	unsigned int port1clk:1;
+// 	unsigned int port2clk:1;
+// 	unsigned int translation:1;
+// 	unsigned int zero2:1;
+// } __attribute__((packed));
 
-struct ps2_status {
-	unsigned int out_buf_status:1;
-	unsigned int in_buf_status:1;
-	unsigned int sys_flag:1;
-	unsigned int cmd_or_data:1;
-	unsigned int unkn1:1;
-	unsigned int unkn2:1;
-	unsigned int time_out_err:1;
-	unsigned int parity_err:1;
-} __attribute__((packed));
+// struct ps2_status {
+// 	unsigned int out_buf_status:1;
+// 	unsigned int in_buf_status:1;
+// 	unsigned int sys_flag:1;
+// 	unsigned int cmd_or_data:1;
+// 	unsigned int unkn1:1;
+// 	unsigned int unkn2:1;
+// 	unsigned int time_out_err:1;
+// 	unsigned int parity_err:1;
+// } __attribute__((packed));
 
-typedef struct ps2_config ps2_config;
+// typedef struct ps2_config ps2_config;
+typedef struct {
+    uint8_t output_buf:1;
+    uint8_t input_buf:1;
+    uint8_t sys_flag:1;
+    uint8_t cmd_data:1;
+    uint8_t unkwn_1:1;
+    uint8_t unkwn_2:1;
+    uint8_t time_err:1;
+    uint8_t parity_err:1;
+} __attribute__((packed)) status;
 
-char getScancode() {
-    char val = '\0';
-    while(1) {
-    	block_until_response_available();
-        val = inb(PS2_DATA);
+typedef struct {
+    uint8_t first_int:1;
+    uint8_t second_int:1;
+    uint8_t sys_flag:1;
+    uint8_t zero_2:1;
+    uint8_t first_clk:1;
+    uint8_t second_clk:1;
+    uint8_t first_trans:1;
+    uint8_t zero_1:1;
+} __attribute__((packed)) config;
 
-        //means that key was pressed
-        if(val > 0){
-        	//shift was pressed
-        	if(val == 0x2a){
-        		left_shift_pressed = 1;
-        	}
-        	else if(val == 0x36){
-        		right_shift_pressed = 1;
-        	}
-        	//todo add checking for ctrl
-        	else {
-		        return val;
-        	}
-        }
-        //means that key was released
-        else {
-        	unsigned char uval = (unsigned char)val;
-        	if(uval == 0xaa){
-        		left_shift_pressed = 0;
-        	}
-        	else if(uval == 0xb6){
-        		right_shift_pressed = 0;
-        	}
-        	//todo add more cases for ctrl and such
-        }
+void initPs2() {
+    config *cfg;
+    uint8_t retVal;
+    //initScancodes();
+    pollInputBuffer();
+    outb(CMD_PORT, 0xAD);
+    pollInputBuffer();
+    outb(CMD_PORT, 0xA7);
+    pollInputBuffer();
+    outb(CMD_PORT, 0x20);
+    retVal = pollOutputBuffer();
+    cfg = (config*)&retVal;
+    cfg->first_int = 0;
+    cfg->second_int = 0;
+    cfg->first_trans = 0;
+    outb(CMD_PORT, 0x60);
+    pollInputBuffer();
+    outb(DATA_PORT, retVal);
+    outb(CMD_PORT, 0xAE);
+    pollInputBuffer();
+    outb(CMD_PORT, 0xA8);
+    pollInputBuffer();
+    outb(CMD_PORT, 0x60);
+    cfg->first_int = 1;
+    cfg->first_clk = 1;
+    cfg->second_int = 1;
+    cfg->second_clk = 1;
+    outb(DATA_PORT, retVal);
+    pollInputBuffer();
+    outb(DATA_PORT, 0xFF);
+    pollInputBuffer();
+    outb(DATA_PORT, 0xF0);
+    pollInputBuffer();
+    outb(DATA_PORT, 0x02);
+    pollInputBuffer();
+    outb(DATA_PORT, 0xF4);
+}
+
+void pollInputBuffer() {
+    status *stat;
+    uint8_t retVal;
+    retVal = inb(CMD_PORT);
+    stat = (status*)&retVal;
+    while(stat->input_buf || stat->time_err) {
+        retVal = inb(CMD_PORT);
     }
 }
 
-char getchar(){
-	// return getScancode();
-	char res = scancode_dict[getScancode()];
-	
-	return left_shift_pressed || right_shift_pressed ? shift_down_dict[res] : res;
+int8_t pollOutputBuffer() {
+    status *stat;
+    int8_t retVal;
+    retVal = inb(CMD_PORT);
+    stat = (status*)&retVal;
+    while(!(stat->output_buf) || stat->time_err) {
+        retVal = inb(CMD_PORT);
+    }
+    return inb(DATA_PORT);
 }
 
-void ps2_init(){
-	ps2_config* ps2conf;
-	unsigned char inbRes;
+// char getScancode() {
+//     char val = '\0';
+//     while(1) {
+//     	block_until_response_available();
+//         val = inb(PS2_DATA);
 
-	//disable devices on ch1 & ch2
-	block_until_input_ready();
-	outb(0xAD, PS2_CMD);
+//         //means that key was pressed
+//         if(val > 0){
+//         	//shift was pressed
+//         	if(val == 0x2a){
+//         		left_shift_pressed = 1;
+//         	}
+//         	else if(val == 0x36){
+//         		right_shift_pressed = 1;
+//         	}
+//         	else if(val == 0x1d){
+//         		left_ctrl_pressed = 1;
+//         	}
+//         	else if(val == 0xe0){
+//         		right_ctrl_pressed = 1;
+//         	}
+//         	else {
+// 		        return val;
+//         	}
+//         }
+//         //means that key was released
+//         else {
+//         	unsigned char uval = (unsigned char)val;
+//         	if(uval == 0xaa){
+//         		left_shift_pressed = 0;
+//         	}
+//         	else if(uval == 0xb6){
+//         		right_shift_pressed = 0;
+//         	}
+//         	// else if(uval == 0x)
+//         	else if(uval == 0x9d){
+//         		left_ctrl_pressed = 0;
+//         	}
+//         }
+//     }
+// }
 
-	block_until_input_ready();
-	outb(0xA7, PS2_CMD);
+// char getchar(){
+// 	// return getScancode();
+// 	char res = scancode_dict[(unsigned int)getScancode()];
+// 	//check for EOF (CTRL+D)
+// 	if(res == 'd' && (left_ctrl_pressed || right_ctrl_pressed))
+// 		return -1;
+// 	return left_shift_pressed || right_shift_pressed ? shift_down_dict[(unsigned int)res] : res;
+// }
 
-	//read the PS/2 config byte
-	block_until_input_ready();
-	outb(0x20, PS2_CMD);
+// void ps2_init(){
+// 	ps2_config* ps2conf;
+// 	uint8_t inbRes;
 
-	block_until_response_available();
-	inbRes = inb(PS2_DATA);
-	ps2conf = (ps2_config*)&inbRes;
+// 	//disable devices on ch1 & ch2
+// 	block_until_input_ready();
+// 	outb(0xAD, PS2_CMD);
 
-	//enable the clock on ch1
-	ps2conf->port1clk = 1;
-	//enable interrupts on ch1
-	ps2conf->interrupt1 = 1;
+// 	block_until_input_ready();
+// 	outb(0xA7, PS2_CMD);
 
-	//disable port2 clk and inter
-	ps2conf->port2clk = 0;
-	ps2conf->interrupt2 = 0;
+// 	//read the PS/2 config byte
+// 	block_until_input_ready();
+// 	outb(0x20, PS2_CMD);
 
-	//write config byte back out to the PS/2 controller
-	outb(0x60, PS2_CMD);
-	block_until_input_ready();
-	outb(inbRes, PS2_DATA);
+// 	block_until_response_available();
+// 	inbRes = inb(PS2_DATA);
+// 	ps2conf = (ps2_config*)&inbRes;
 
-}
+// 	//enable the clock on ch1
+// 	ps2conf->port1clk = 1;
+// 	//enable interrupts on ch1
+// 	ps2conf->interrupt1 = 1;
 
-void keyboard_config(){
-	unsigned char response;
+// 	//disable port2 clk and inter
+// 	ps2conf->port2clk = 0;
+// 	ps2conf->interrupt2 = 0;
 
-	//reset the keyboard
-	outb(PS2_DATA, 0xFE);
-	response = inb(PS2_STATUS);
+// 	//write config byte back out to the PS/2 controller
+// 	outb(0x60, PS2_CMD);
+// 	block_until_input_ready();
+// 	outb(inbRes, PS2_DATA);
 
-	//set the keyboard to a known scan code
-	outb(PS2_DATA, 0xF0);
-	response = inb(PS2_STATUS);
+// 	outb(0xAE, PS2_CMD);
+// 	block_until_input_ready();
 
-	outb(PS2_DATA, 1);
-	response = inb(PS2_STATUS);
+// 	outb(0xA8, PS2_CMD);
+// 	block_until_input_ready();
 
-	//enable the keyboard
-	outb(PS2_DATA, 0xF4);
-}
+// 	outb(0x60, PS2_CMD);
+// 	ps2conf->interrupt1 = 1;
+// 	ps2conf->port1clk = 0;
+// 	ps2conf->interrupt2 = 0;
+// 	ps2conf->port2clk = 1;
 
-/**
-  * poll status until the 0 bit in response is set
-  * response is ready when this is set
-  */
-void block_until_response_available(){
-	unsigned char status = inb(PS2_STATUS);
-	struct ps2_status* status_mask = (struct ps2_status*)&status;
+// 	outb(inbRes, PS2_DATA);
+// 	block_until_input_ready();
+// 	outb(0xFF, PS2_DATA);
+// 	block_until_input_ready();
+// 	outb(0xF0, PS2_DATA);
+// 	block_until_input_ready();
+// 	outb(0x02, PS2_DATA);
+// 	block_until_input_ready();
+// 	outb(0xF4, PS2_DATA);
+// }
 
-	while(!(status_mask->out_buf_status) || status_mask->time_out_err){
-		status = inb(PS2_STATUS);
-	}
+// void keyboard_config(){
+// 	//reset the keyboard
+// 	outb(PS2_DATA, 0xFE);
+// 	inb(PS2_STATUS);
 
-}
+// 	//set the keyboard to a known scan code
+// 	outb(PS2_DATA, 0xF0);
+// 	inb(PS2_STATUS);
+
+// 	outb(PS2_DATA, 1);
+// 	inb(PS2_STATUS);
+
+// 	//enable the keyboard
+// 	outb(PS2_DATA, 0xF4);
+// }
+
+// /**
+//   * poll status until the 0 bit in response is set
+//   * response is ready when this is set
+//   */
+// void block_until_response_available(){
+// 	unsigned char status = inb(PS2_STATUS);
+// 	struct ps2_status* status_mask = (struct ps2_status*)&status;
+
+// 	while(!(status_mask->out_buf_status) || status_mask->time_out_err){
+// 		status = inb(PS2_STATUS);
+// 	}
+
+// }
 
 /**
   * poll status until the 1 bit in response is clear
   * this is needed before sending the next byte of a two byte command
   */
-void block_until_input_ready(){
-	unsigned char status = inb(PS2_STATUS);
-	struct ps2_status *mask = (struct ps2_status*)&status;
+// void block_until_input_ready(){
+// 	unsigned char status = inb(PS2_STATUS);
+// 	struct ps2_status *mask = (struct ps2_status*)&status;
 
-	while (mask->out_buf_status && !mask->time_out_err){
-		status = inb(PS2_STATUS);
-	}	
+// 	while (mask->out_buf_status && !mask->time_out_err){
+// 		status = inb(PS2_STATUS);
+// 	}
+// }
+
+void keyboard_handler_main(char scan){
+	/* write End Of Input */
+	outb(0x20, 0x20);
+
+	//translate the scancode to the ascii char
+	char val = scancode_dict[(int)scan];
+
+	if(scan > 0){
+    	//shift was pressed
+    	if(scan == 0x2a){
+    		left_shift_pressed = 1;
+    	}
+    	else if(scan == 0x36){
+    		right_shift_pressed = 1;
+    	}
+    	else if(scan == 0x1d){
+    		left_ctrl_pressed = 1;
+    	}
+    	else if(scan == 0xe0){
+    		right_ctrl_pressed = 1;
+    	}
+    	else {
+			printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[(unsigned int)val] : val);
+    	}
+    }
+    // means that key was released
+    else {
+    	unsigned char uval = (unsigned char)scan;
+    	if(uval == 0xaa){
+    		left_shift_pressed = 0;
+    	}
+    	else if(uval == 0xb6){
+    		right_shift_pressed = 0;
+    	}
+    	// else if(uval == 0x)
+    	else if(uval == 0x9d){
+    		left_ctrl_pressed = right_ctrl_pressed = 0;
+    	}
+    } 
+
+
+}
+
+/*
+ * this function merely handles the sent scancode
+ * meant to handle a given scancode regardless of polling or interrupt
+ * driven keyboard I/O
+ */
+void handle_generic_keypress(char scancode){
+
 }

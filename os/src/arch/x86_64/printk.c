@@ -1,9 +1,5 @@
 #include <stdarg.h>
-
-extern void halt_wrapper();
-extern void VGA_clear();
-extern void VGA_display_char(char);
-extern void VGA_display_str(const char *);
+#include "printk.h"
 
 void printLineAcrossScreen(){
 	int i;
@@ -68,7 +64,6 @@ void printUnsignedShort(unsigned short s){
 }
 
 void printHexShort(unsigned short s){
-	unsigned int i = 0 + s;
 	printUnsignedHex(s, 0);
 }
 
@@ -175,10 +170,10 @@ void printk(const char *fmtStr, ...) {
 					printUnsignedHex(va_arg(args, unsigned int), 1);
 					break;
 				case 'c':
-					VGA_display_char(va_arg(args, char));
+					VGA_display_char((char)va_arg(args, int));
 					break;
 				case 'p':
-					printUnsignedHex((unsigned int)va_arg(args, void*), 0);
+					printUnsignedHex((unsigned int)va_arg(args, unsigned int), 0);
 					break;
 				case 'h':
 					switch(*(fmtStr + 2)){
