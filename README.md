@@ -8,6 +8,12 @@ This is the repository containing the implementation of a x86_64 operating syste
 4. ~~Polling keyboard driver (now removed with interrupt implementation)~~
 5. ~~Handle Interrupts (Interface is only partially implemented)~~
 6. ~~Interrupt-Driven Serial Output (Interface is only partially implemented)~~
+#### Milestones that still need to be implemented:
+7. Parse Multiboot tags and Page Frame Allocator
+8. Virtual Page Allocator
+9. Heap allocator
+10. Cooperative Multitasking
+11. Process Management and Keyboard Driver
 
 #### Things that need to be done/fixed in current code:
 * Move everything not pertaining to booting into long mode into separate files
@@ -19,9 +25,3 @@ This is the repository containing the implementation of a x86_64 operating syste
   * void IRQ_set_handler(int irq, irq_handler_t handler, void *arg); //will need to modify my irqs to do something with args I think
 * Make sure that there are no race conditions in the implemented code
 
-#### Milestones that still need to be implemented:
-7. Parse Multiboot tags and Page Frame Allocator
-8. Virtual Page Allocator
-9. Heap allocator
-10. Cooperative Multitasking
-11. Process Management and Keyboard Driver
