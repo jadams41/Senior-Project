@@ -6,71 +6,37 @@
 
 extern void interrupt_test_wrapper();
 
-//this function will poll the keyboard until CTRL-D is pressed
-//at this point it will stop polling and print a message indicating this
-// void endlessly_poll_keyboard(){
-// 	while(1){
-//   		char c = getchar();
-
-//   		//check for EOF (-1)
-//   		if(c < 0) break;
-//   		if(c){
-//   			// printk("%hx\n", uc);
-//   			VGA_display_char(c);
-//   		}
-//   	}
-//   	printk("\n[DONE POLLING]\n");
-// }
-
-// void breakpoint(){
-//   printk("at a breakpoint\n");
-// }
-
 int kmain(){
   asm("cli");
   int enabled = 0;
 
-  //clear the vga console now that we are up and running
+  //set up and test the VGA
   VGA_clear();
-
   vgaDispCharTest();
-
   VGA_display_str("string print test\n");
 
-  //printkTest();
-
-
-  //while(!enabled) ;
-
+  //set up the things needed for printk
   initialize_scancodes();
   initialize_shift_down_dict();
   disableSerialPrinting();
 
-  // enabled = 1;
-  // VGA_display_char('\n');
-  // printk("about to init ps2\n");
-
+  //currently working without this, too scared to uncomment
   // initPs2();
-  // printk("ps2 initialized\n");
-
-  // printk("about to configure keyboard\n");
   // keyboard_config();
-  // printk("keyboard_configured\n");
 
-//  endlessly_poll_keyboard();
-
-  printk("[ABOUT TO INIT IDT]\n");
-
+  //initialize interrupts
   idt_init();
-  //printk("[IDT INITIALIZED\n");
-  
-  //printk("[ABOUT TO ENABLE KEYBOARD INTERRUPTS]\n");
   kb_init();
+
+  //turn on interrupts
   asm("sti");
 
+  //initialize serial tx interrupts and writing
   SER_init();
   enableSerialPrinting();
   SER_write("----SERIAL DEBUGGING BEGIN----\n",31);
+
+  //wait
   while(!enabled) ;
 
   return 0;
