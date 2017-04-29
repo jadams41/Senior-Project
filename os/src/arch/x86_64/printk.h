@@ -9,5 +9,7 @@ extern void VGA_display_str(const char *);
 void printk(const char *fmtStr, ...);
 void vgaDispCharTest();
 void printkTest();
+void disableSerialPrinting();
+void enableSerialPrinting();
 
 #endif

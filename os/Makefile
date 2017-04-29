@@ -22,7 +22,10 @@ clean:
 	-rm $(symbol_link_file)
 
 run: $(iso)
-	@qemu-system-x86_64 -monitor stdio -s -cdrom $(iso)
+	@qemu-system-x86_64 -s -cdrom $(iso) -serial stdio
+
+runb: $(iso)
+	@bochs -q
 
 iso: $(iso)
 

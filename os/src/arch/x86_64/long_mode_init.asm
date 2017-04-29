@@ -295,62 +295,9 @@ halt_wrapper:
 interrupt_test_wrapper:
     sidt [cursor_char]
     mov rax, [cursor_char]
-    ; int 0x0
-    ; int 0x01
-    ; int 0x02
-    ; int 0x03
-    ; int 0x04
-    ; int 0x05
-    ; int 0x06
-    ; int 0x07
-    ; int 0x08
-    ; int 0x09
-    ; int 0x0a
-    ; int 0x0b
-    ; int 0x0c
-    ; int 0x0d
-    ; int 0x0e
-    ; int 0x0f
-    ; int 0x10
-    ; int 0x11
-    ; int 0x12
-    ; int 0x13
-    ; int 0x14
-    ; int 0x15
-    ; int 0x16
-    ; int 0x17
-    int 0x18
-    int 0x19
-    int 0x1a
-    int 0x1b
-    int 0x1c
-    int 0x1d
-    int 0x1e
-    int 0x1f
-    int 0x20
-    int 0x21
-    int 0x22
-    int 0x23
-    int 0x24
-    int 0x25
-    int 0x26
-    int 0x27
-
     ret
 
-; read_port:
-;     mov edx, [esp + 4]
-;     in al, dx
-;     ret
-
-; write_port:
-;     mov edx, [esp + 4]
-;     mov al, [esp + 4 + 4]
-;     out dx, al
-;     ret
-
 load_idt:
-    ; mov edx, [esp + 4]
     mov rax, [rdi]
     lidt [rdi]
     sti

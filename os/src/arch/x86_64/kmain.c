@@ -2,6 +2,7 @@
 #include "printk.h"
 #include "ps2Driver.h"
 #include "idt.h"
+#include "serial.h"
 
 extern void interrupt_test_wrapper();
 
@@ -43,10 +44,9 @@ int kmain(){
 
   initialize_scancodes();
   initialize_shift_down_dict();
+  disableSerialPrinting();
 
-
-
-  // while(!enabled) ;
+  // enabled = 1;
   // VGA_display_char('\n');
   // printk("about to init ps2\n");
 
@@ -59,7 +59,6 @@ int kmain(){
 
 //  endlessly_poll_keyboard();
 
-
   printk("[ABOUT TO INIT IDT]\n");
 
   idt_init();
@@ -68,17 +67,11 @@ int kmain(){
   //printk("[ABOUT TO ENABLE KEYBOARD INTERRUPTS]\n");
   kb_init();
   asm("sti");
-  //printk("[KEYBOARD INTERRUPT INITIALIZED\n");
-  // enabled = 0;
-  // while (!enabled) ;
- // while(!enabled) ;
 
+  SER_init();
+  enableSerialPrinting();
+  SER_write("----SERIAL DEBUGGING BEGIN----\n",31);
   while(!enabled) ;
-
-  //try INTERRUPTS
-  interrupt_test_wrapper();
-
-  // breakpoint();
 
   return 0;
 

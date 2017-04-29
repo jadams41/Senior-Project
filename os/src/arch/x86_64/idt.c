@@ -1,6 +1,7 @@
 #include <stdint-gcc.h>
 #include "printk.h"
 #include "ps2Driver.h"
+#include "serial.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -388,6 +389,7 @@ void c_isr31(int irq, int err){
 void c_isr32(int irq, int err){
 	return;
 }
+//keyboard isr
 void c_isr33(int irq, int err){
 	pollInputBuffer();
     char val = inby(0x60);
@@ -399,7 +401,10 @@ void c_isr34(int irq, int err){
 void c_isr35(int irq, int err){
     return;
 }
+//serial irq
 void c_isr36(int irq, int err){
+    //indirect way to call consume byte
+    SER_write("",0);
     return;
 }
 void c_isr37(int irq, int err){
@@ -1657,13 +1662,21 @@ void idt_init(void)
 
 void kb_init(void){
 	//mask all interrupts to off except for the keyboard IRQ1
-	outby(0x21, 0xfd);
-	outby(0xA1, 0x00);
-	asm ( "sti" );
+	// outby(0x21, 0xfd);
+	// outby(0xA1, 0x00);
+	outby(0x21, 0x01);
+	outby(0xa1, 0x00);
+
+	// asm ( "sti" );
 }
 
 void generic_c_isr(int irq, int err){
-	// printk("received keypress\n");
+    //printk("interrupted on %d", irq);
+    // if(err != -1){
+    //     printk(" with err: %d", err);
+    // }
+    // printk("\n");
+
 	(c_ISRs[irq])(irq, err);
 
 	if(irq > 8){

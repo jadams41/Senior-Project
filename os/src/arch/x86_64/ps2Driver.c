@@ -1,7 +1,7 @@
 #include "ps2Driver.h"
 #include "printk.h"
 #include <stdint-gcc.h>
-
+#include "utils.h"
 #define PS2_CMD_CONF 0x20
 #define PS2_DATA 0x60
 #define PS2_CMD 0x64
@@ -133,16 +133,6 @@ char getCharFromScan(int scan){
 
 // extern void outb(unsigned char value, unsigned short int port);
 // extern unsigned char inb(unsigned short int port);
-
-void inline outb(uint16_t port, uint8_t val) {
-    asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-uint8_t inline inb(uint16_t port) {
-    uint8_t val;
-    asm volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
-    return val;
-}
 
 // struct ps2_config {
 // 	unsigned int interrupt1:1;
@@ -398,12 +388,20 @@ int8_t pollOutputBuffer() {
 // 	}
 // }
 
+// int tryToTriggerPageFault(){
+// 	int *fakePtr = (int *)0xffffffffff;
+// 	int test = *fakePtr;
+// 	return test;
+// }
+
 void keyboard_handler_main(char scan){
 	/* write End Of Input */
 	outb(0x20, 0x20);
 
+	// tryToTriggerPageFault();
+
 	//translate the scancode to the ascii char
-	char val = scancode_dict[(int)scan];
+	//char val = scancode_dict[(int)scan];
 
 	if(scan > 0){
     	//shift was pressed
@@ -420,7 +418,9 @@ void keyboard_handler_main(char scan){
     		right_ctrl_pressed = 1;
     	}
     	else {
-			printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[(unsigned int)val] : val);
+    		char val = scancode_dict[(uint8_t)scan];
+    		uint8_t idx = (uint8_t)val;
+			printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
     	}
     }
     // means that key was released

@@ -1,10 +1,32 @@
 #include <stdarg.h>
 #include "printk.h"
+#include "serial.h"
+#include <stdint-gcc.h>
+
+//this variable is used to disable serial writing
+//only time it should really be set is when printing errors from
+//inside serial ISR (to avoid infinite call loop)
+static char serialDisabled = 1;
+
+void disableSerialPrinting(){
+	serialDisabled = 1;
+}
+
+void enableSerialPrinting(){
+	serialDisabled = 0;
+}
+
+void printCharToVGAandSER(char c){
+	VGA_display_char(c);
+	
+	if(!serialDisabled) 
+		SER_write(&c,1);
+}
 
 void printLineAcrossScreen(){
 	int i;
 	for(i = 0; i < 80; i++){
-		VGA_display_char('-');
+		printCharToVGAandSER('-');
 	}
 }
 
@@ -14,13 +36,13 @@ void printLineAcrossScreen(){
  */
 void printInteger(int i){
 	if(i < 0){
-		VGA_display_char('-');
+		printCharToVGAandSER('-');
 		i *= -1;
 	}
 	if(i / 10){
 		printInteger(i / 10);
 	}
-	VGA_display_char((char)(48 + i % 10));
+	printCharToVGAandSER((char)(48 + i % 10));
 }
 
 /**
@@ -30,7 +52,7 @@ void printUnsignedInteger(unsigned int i){
 	if(i / 10){
 		printUnsignedInteger(i / 10);
 	}
-	VGA_display_char((char)(48 + i % 10));
+	printCharToVGAandSER((char)(48 + i % 10));
 }
 
 void printUnsignedHex(unsigned int i, short isUppercase){
@@ -50,7 +72,7 @@ void printUnsignedHex(unsigned int i, short isUppercase){
 	else {
 		charToPrint = (char)(48 + i);
 	}
-	VGA_display_char(charToPrint);
+	printCharToVGAandSER(charToPrint);
 }
 
 void printShort(short s){
@@ -69,20 +91,20 @@ void printHexShort(unsigned short s){
 
 void printLong(long l){
 	if(l < 0){
-		VGA_display_char('-');
+		printCharToVGAandSER('-');
 		l *= -1;
 	}
 	if(l / 10){
 		printLong(l / 10);
 	}
-	VGA_display_char((char)(48 + l % 10));
+	printCharToVGAandSER((char)(48 + l % 10));
 }
 
 void printUnsignedLong(unsigned long l){
 	if(l / 10){
 		printUnsignedLong(l / 10);
 	}
-	VGA_display_char((char)(48 + l % 10));
+	printCharToVGAandSER((char)(48 + l % 10));
 }
 
 void printHexLong(unsigned long l){
@@ -97,21 +119,21 @@ void printHexLong(unsigned long l){
 	else {
 		charToPrint = (char)(48 + l);
 	}
-	VGA_display_char(charToPrint);
+	printCharToVGAandSER(charToPrint);
 }
 
 void printQuad(long long l){
 	if(l / 10){
 		printQuad(l / 10);
 	}
-	VGA_display_char((char)(48 + l % 10));
+	printCharToVGAandSER((char)(48 + l % 10));
 }
 
 void printUnsignedQuad(unsigned long long l){
 	if(l / 10){
 		printUnsignedQuad(l / 10);
 	}
-	VGA_display_char((char)(48 + l % 10));
+	printCharToVGAandSER((char)(48 + l % 10));
 }
 
 void printHexQuad(unsigned long long l){
@@ -126,7 +148,7 @@ void printHexQuad(unsigned long long l){
 	else {
 		charToPrint = (char)(48 + l);
 	}
-	VGA_display_char(charToPrint);
+	printCharToVGAandSER(charToPrint);
 }
 /**
  * currently includes support for the following tokens
@@ -141,7 +163,8 @@ void printHexQuad(unsigned long long l){
  * %l[dux] long [d] integer, [u] unsigned, or [h] hex
  * %q[dux] quad [d] integer, [u] unsigned, or [h] hex
  *
- * NOTE: currently can't escape %
+ * Note: for every character written, that character will 
+ * also be printed to the Serial Port #1
  */
 void printk(const char *fmtStr, ...) {
 	va_list args;
@@ -158,7 +181,7 @@ void printk(const char *fmtStr, ...) {
 					VGA_display_str(va_arg(args, char*));
 					break;
 				case '%':
-					VGA_display_char('%');
+					printCharToVGAandSER('%');
 					break;
 				case 'u':
 					printUnsignedInteger(va_arg(args, unsigned int));
@@ -170,7 +193,7 @@ void printk(const char *fmtStr, ...) {
 					printUnsignedHex(va_arg(args, unsigned int), 1);
 					break;
 				case 'c':
-					VGA_display_char((char)va_arg(args, int));
+					printCharToVGAandSER((char)va_arg(args, int));
 					break;
 				case 'p':
 					printUnsignedHex((unsigned int)va_arg(args, unsigned int), 0);
@@ -223,18 +246,18 @@ void printk(const char *fmtStr, ...) {
 			fmtStr += 2;
 		}
 		else {
-			VGA_display_char(*fmtStr);
+			printCharToVGAandSER(*fmtStr);
 			fmtStr++;
 		}
 	}
 }
 
 void vgaDispCharTest(){
-  VGA_display_char('t');
-  VGA_display_char('e');
-  VGA_display_char('s');
-  VGA_display_char('t');
-  VGA_display_char('\n');
+  printCharToVGAandSER('t');
+  printCharToVGAandSER('e');
+  printCharToVGAandSER('s');
+  printCharToVGAandSER('t');
+  printCharToVGAandSER('\n');
 }
 
 void printkTest(){
