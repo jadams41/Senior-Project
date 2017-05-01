@@ -16,6 +16,11 @@ Things that need to be done/fixed in current code:
   * int IRQ_get_mask(int IRQLine); //no idea what the fuck this is
   * void IRQ_end_of_interrupt(int irq); //again, no idea what the fuck this is
   * void IRQ_set_handler(int irq, irq_handler_t handler, void *arg); //will need to modify my irqs to do something with args I think
+  * **Need to implement the TSS's this will constitute the following**
+  	* figure out what Interrupts (faults) need TSS
+  	* Figure out how the TSS will be initialized (think that this is just another static chunk in one of the .ASM files)
+  	* Probably also figure out where the TSS stacks will be and how they will be implemented
+  		* Again, I think that this is just some more asm define bytes and tags
 
 * Make sure that there are no race conditions in the implemented code
 
@@ -25,3 +30,6 @@ Milestones that still need to be implemented:
 9. Heap allocator
 10. Cooperative Multitasking
 11. Process Management and Keyboard Driver
+
+####Miscellaneous notes####
+* Figure out what inline function tag does

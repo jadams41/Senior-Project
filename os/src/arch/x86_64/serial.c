@@ -8,10 +8,6 @@ State curState;
 int stateInitialized = 0;
 static int hwBusy = 1;
 
-// void setLocalState(State *newState){
-// 	curState = newState;
-// }
-
 static void init_state(State *state){
 	state->head = &state->buff[0];
 	state->tail = &state->buff[0];
@@ -30,7 +26,9 @@ static int serial_transmit_fifo_ready(){
 static void consume_byte(char b){
 	//even though this should be called from an interrupt when the hw is ready
 	//still make sure that the FIFO is clear
-	while(!serial_transmit_fifo_ready()) ;
+	int status = serial_transmit_fifo_ready();
+	while(!status)
+		status = serial_transmit_fifo_ready();
 
 	//fifo is empty and good to be written to
 	outb(COM_PORT_1 + SER_DATA, (uint8_t) b);
@@ -48,10 +46,9 @@ static void consumer_next(State *state){
 }
 
 static int producer_add_char(char toAdd, State *state){
-	if(state->head -1 == state->tail ||
-		(state->head == &state->buff[0] && state->tail == &state->buff[BUFF_SIZE - 1]))
+	if(state->head - 1 == state->tail || (state->head == &state->buff[0] && state->tail == &state->buff[BUFF_SIZE - 1]))
 		return 0;
-	
+
 	*state->tail++ = toAdd;
 	if(state->tail >= &state->buff[BUFF_SIZE])
 		state->tail = &state->buff[0];
@@ -104,7 +101,6 @@ static void clearLineStatus(){
  */
 
 int SER_write(const char *buff, int len){
-	asm("cli");
 
 	int buffFull = 0, charsWritten = 0;
 	while(len--){
@@ -114,7 +110,6 @@ int SER_write(const char *buff, int len){
 			disableSerialPrinting();
 			// printk("failed writing to serial driver buffer, ran out of buffer space\n");
 			enableSerialPrinting();
-			asm("sti");
 			return charsWritten;
 		}
 		charsWritten++;
@@ -132,6 +127,5 @@ int SER_write(const char *buff, int len){
 		clearLineStatus();
 	}
 
-	asm("sti");
 	return charsWritten;
 }

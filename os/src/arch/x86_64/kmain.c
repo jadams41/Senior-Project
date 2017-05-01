@@ -26,7 +26,8 @@ int kmain(){
 
   //initialize interrupts
   idt_init();
-  kb_init();
+  IRQ_clear_mask(KEYBOARD_IRQ);
+  IRQ_clear_mask(SERIAL_COM1_IRQ);
 
   //turn on interrupts
   asm("sti");
@@ -34,10 +35,12 @@ int kmain(){
   //initialize serial tx interrupts and writing
   SER_init();
   enableSerialPrinting();
-  SER_write("----SERIAL DEBUGGING BEGIN----\n",31);
 
   //wait
   while(!enabled) ;
+
+  SER_write("----SERIAL DEBUGGING BEGIN----\n",31);
+
 
   return 0;
 

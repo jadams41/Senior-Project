@@ -13,3 +13,10 @@ os/build/*
 
 #all mac folder preference files
 *DS_Store*
+
+#all bochs files
+*bochs*
+
+#implemented utilities
+utils/
+utils/*

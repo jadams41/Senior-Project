@@ -293,8 +293,11 @@ halt_wrapper:
     hlt
 
 interrupt_test_wrapper:
-    sidt [cursor_char]
-    mov rax, [cursor_char]
+    int 30
+    int 31
+    int 32
+    int 33
+    int 34
     ret
 
 load_idt:
@@ -332,7 +335,7 @@ VGA_display_char:
 
     ; load the current vga buffer pointer
     mov rax, [vga_buf_cur]
-    
+
     ; check if the character is a backspace
     mov rbx, [backspace_char]
     and rbx, 0x00ff
@@ -427,10 +430,10 @@ disp_loop:
     ; grab the character from the current string pointer
     mov rdi, [rax]
     and rdi, 0xff
-    
+
     ; check for null terminator
     cmp rdi, 0
-    
+
     ; if null terminator, finish the routine
     je disp_end
 

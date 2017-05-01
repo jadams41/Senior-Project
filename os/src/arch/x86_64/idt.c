@@ -265,16 +265,21 @@ extern void irq255_handler(void);
 
 #define IDT_SIZE 256
 
+//todo remove all references to these and replace with the functions in
+//utils.c and ensure that the functionality is the same
+//note: port and val may be switched
 void inline outby(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
+//
 uint8_t inline inby(uint16_t port) {
     uint8_t val;
     asm volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
     return val;
 }
 
+//todo move this structure to the header file
 typedef struct {
     uint16_t funct_ptr_1;
     uint16_t gdt_select;
@@ -290,780 +295,6 @@ typedef struct {
 }__attribute__((packed)) IDT_Entry;
 
 IDT_Entry IDT[IDT_SIZE];
-void c_isr0(int irq, int err){
-    return;
-}
-void c_isr1(int irq, int err){
-    return;
-}
-void c_isr2(int irq, int err){
-    return;
-}
-void c_isr3(int irq, int err){
-    return;
-}
-void c_isr4(int irq, int err){
-    return;
-}
-void c_isr5(int irq, int err){
-    return;
-}
-void c_isr6(int irq, int err){
-    return;
-}
-void c_isr7(int irq, int err){
-    return;
-}
-void c_isr8(int irq, int err){
-    return;
-}
-void c_isr9(int irq, int err){
-    return;
-}
-void c_isr10(int irq, int err){
-    return;
-}
-void c_isr11(int irq, int err){
-    return;
-}
-void c_isr12(int irq, int err){
-    return;
-}
-void c_isr13(int irq, int err){
-    return;
-}
-void c_isr14(int irq, int err){
-    return;
-}
-void c_isr15(int irq, int err){
-    return;
-}
-void c_isr16(int irq, int err){
-    return;
-}
-void c_isr17(int irq, int err){
-    return;
-}
-void c_isr18(int irq, int err){
-    return;
-}
-void c_isr19(int irq, int err){
-    return;
-}
-void c_isr20(int irq, int err){
-    return;
-}
-void c_isr21(int irq, int err){
-    return;
-}
-void c_isr22(int irq, int err){
-    return;
-}
-void c_isr23(int irq, int err){
-    return;
-}
-void c_isr24(int irq, int err){
-    return;
-}
-void c_isr25(int irq, int err){
-    return;
-}
-void c_isr26(int irq, int err){
-    return;
-}
-void c_isr27(int irq, int err){
-    return;
-}
-void c_isr28(int irq, int err){
-    return;
-}
-void c_isr29(int irq, int err){
-    return;
-}
-void c_isr30(int irq, int err){
-    return;
-}
-void c_isr31(int irq, int err){
-    return;
-}
-void c_isr32(int irq, int err){
-	return;
-}
-//keyboard isr
-void c_isr33(int irq, int err){
-	pollInputBuffer();
-    char val = inby(0x60);
-    keyboard_handler_main((char)val);
-}
-void c_isr34(int irq, int err){
-    return;
-}
-void c_isr35(int irq, int err){
-    return;
-}
-//serial irq
-void c_isr36(int irq, int err){
-    //indirect way to call consume byte
-    SER_write("",0);
-    return;
-}
-void c_isr37(int irq, int err){
-    return;
-}
-void c_isr38(int irq, int err){
-    return;
-}
-void c_isr39(int irq, int err){
-    return;
-}
-void c_isr40(int irq, int err){
-    return;
-}
-void c_isr41(int irq, int err){
-    return;
-}
-void c_isr42(int irq, int err){
-    return;
-}
-void c_isr43(int irq, int err){
-    return;
-}
-void c_isr44(int irq, int err){
-    return;
-}
-void c_isr45(int irq, int err){
-    return;
-}
-void c_isr46(int irq, int err){
-    return;
-}
-void c_isr47(int irq, int err){
-    return;
-}
-void c_isr48(int irq, int err){
-    return;
-}
-void c_isr49(int irq, int err){
-    return;
-}
-void c_isr50(int irq, int err){
-    return;
-}
-void c_isr51(int irq, int err){
-    return;
-}
-void c_isr52(int irq, int err){
-    return;
-}
-void c_isr53(int irq, int err){
-    return;
-}
-void c_isr54(int irq, int err){
-    return;
-}
-void c_isr55(int irq, int err){
-    return;
-}
-void c_isr56(int irq, int err){
-    return;
-}
-void c_isr57(int irq, int err){
-    return;
-}
-void c_isr58(int irq, int err){
-    return;
-}
-void c_isr59(int irq, int err){
-    return;
-}
-void c_isr60(int irq, int err){
-    return;
-}
-void c_isr61(int irq, int err){
-    return;
-}
-void c_isr62(int irq, int err){
-    return;
-}
-void c_isr63(int irq, int err){
-    return;
-}
-void c_isr64(int irq, int err){
-    return;
-}
-void c_isr65(int irq, int err){
-    return;
-}
-void c_isr66(int irq, int err){
-    return;
-}
-void c_isr67(int irq, int err){
-    return;
-}
-void c_isr68(int irq, int err){
-    return;
-}
-void c_isr69(int irq, int err){
-    return;
-}
-void c_isr70(int irq, int err){
-    return;
-}
-void c_isr71(int irq, int err){
-    return;
-}
-void c_isr72(int irq, int err){
-    return;
-}
-void c_isr73(int irq, int err){
-    return;
-}
-void c_isr74(int irq, int err){
-    return;
-}
-void c_isr75(int irq, int err){
-    return;
-}
-void c_isr76(int irq, int err){
-    return;
-}
-void c_isr77(int irq, int err){
-    return;
-}
-void c_isr78(int irq, int err){
-    return;
-}
-void c_isr79(int irq, int err){
-    return;
-}
-void c_isr80(int irq, int err){
-    return;
-}
-void c_isr81(int irq, int err){
-    return;
-}
-void c_isr82(int irq, int err){
-    return;
-}
-void c_isr83(int irq, int err){
-    return;
-}
-void c_isr84(int irq, int err){
-    return;
-}
-void c_isr85(int irq, int err){
-    return;
-}
-void c_isr86(int irq, int err){
-    return;
-}
-void c_isr87(int irq, int err){
-    return;
-}
-void c_isr88(int irq, int err){
-    return;
-}
-void c_isr89(int irq, int err){
-    return;
-}
-void c_isr90(int irq, int err){
-    return;
-}
-void c_isr91(int irq, int err){
-    return;
-}
-void c_isr92(int irq, int err){
-    return;
-}
-void c_isr93(int irq, int err){
-    return;
-}
-void c_isr94(int irq, int err){
-    return;
-}
-void c_isr95(int irq, int err){
-    return;
-}
-void c_isr96(int irq, int err){
-    return;
-}
-void c_isr97(int irq, int err){
-    return;
-}
-void c_isr98(int irq, int err){
-    return;
-}
-void c_isr99(int irq, int err){
-    return;
-}
-void c_isr100(int irq, int err){
-    return;
-}
-void c_isr101(int irq, int err){
-    return;
-}
-void c_isr102(int irq, int err){
-    return;
-}
-void c_isr103(int irq, int err){
-    return;
-}
-void c_isr104(int irq, int err){
-    return;
-}
-void c_isr105(int irq, int err){
-    return;
-}
-void c_isr106(int irq, int err){
-    return;
-}
-void c_isr107(int irq, int err){
-    return;
-}
-void c_isr108(int irq, int err){
-    return;
-}
-void c_isr109(int irq, int err){
-    return;
-}
-void c_isr110(int irq, int err){
-    return;
-}
-void c_isr111(int irq, int err){
-    return;
-}
-void c_isr112(int irq, int err){
-    return;
-}
-void c_isr113(int irq, int err){
-    return;
-}
-void c_isr114(int irq, int err){
-    return;
-}
-void c_isr115(int irq, int err){
-    return;
-}
-void c_isr116(int irq, int err){
-    return;
-}
-void c_isr117(int irq, int err){
-    return;
-}
-void c_isr118(int irq, int err){
-    return;
-}
-void c_isr119(int irq, int err){
-    return;
-}
-void c_isr120(int irq, int err){
-    return;
-}
-void c_isr121(int irq, int err){
-    return;
-}
-void c_isr122(int irq, int err){
-    return;
-}
-void c_isr123(int irq, int err){
-    return;
-}
-void c_isr124(int irq, int err){
-    return;
-}
-void c_isr125(int irq, int err){
-    return;
-}
-void c_isr126(int irq, int err){
-    return;
-}
-void c_isr127(int irq, int err){
-    return;
-}
-void c_isr128(int irq, int err){
-    return;
-}
-void c_isr129(int irq, int err){
-    return;
-}
-void c_isr130(int irq, int err){
-    return;
-}
-void c_isr131(int irq, int err){
-    return;
-}
-void c_isr132(int irq, int err){
-    return;
-}
-void c_isr133(int irq, int err){
-    return;
-}
-void c_isr134(int irq, int err){
-    return;
-}
-void c_isr135(int irq, int err){
-    return;
-}
-void c_isr136(int irq, int err){
-    return;
-}
-void c_isr137(int irq, int err){
-    return;
-}
-void c_isr138(int irq, int err){
-    return;
-}
-void c_isr139(int irq, int err){
-    return;
-}
-void c_isr140(int irq, int err){
-    return;
-}
-void c_isr141(int irq, int err){
-    return;
-}
-void c_isr142(int irq, int err){
-    return;
-}
-void c_isr143(int irq, int err){
-    return;
-}
-void c_isr144(int irq, int err){
-    return;
-}
-void c_isr145(int irq, int err){
-    return;
-}
-void c_isr146(int irq, int err){
-    return;
-}
-void c_isr147(int irq, int err){
-    return;
-}
-void c_isr148(int irq, int err){
-    return;
-}
-void c_isr149(int irq, int err){
-    return;
-}
-void c_isr150(int irq, int err){
-    return;
-}
-void c_isr151(int irq, int err){
-    return;
-}
-void c_isr152(int irq, int err){
-    return;
-}
-void c_isr153(int irq, int err){
-    return;
-}
-void c_isr154(int irq, int err){
-    return;
-}
-void c_isr155(int irq, int err){
-    return;
-}
-void c_isr156(int irq, int err){
-    return;
-}
-void c_isr157(int irq, int err){
-    return;
-}
-void c_isr158(int irq, int err){
-    return;
-}
-void c_isr159(int irq, int err){
-    return;
-}
-void c_isr160(int irq, int err){
-    return;
-}
-void c_isr161(int irq, int err){
-    return;
-}
-void c_isr162(int irq, int err){
-    return;
-}
-void c_isr163(int irq, int err){
-    return;
-}
-void c_isr164(int irq, int err){
-    return;
-}
-void c_isr165(int irq, int err){
-    return;
-}
-void c_isr166(int irq, int err){
-    return;
-}
-void c_isr167(int irq, int err){
-    return;
-}
-void c_isr168(int irq, int err){
-    return;
-}
-void c_isr169(int irq, int err){
-    return;
-}
-void c_isr170(int irq, int err){
-    return;
-}
-void c_isr171(int irq, int err){
-    return;
-}
-void c_isr172(int irq, int err){
-    return;
-}
-void c_isr173(int irq, int err){
-    return;
-}
-void c_isr174(int irq, int err){
-    return;
-}
-void c_isr175(int irq, int err){
-    return;
-}
-void c_isr176(int irq, int err){
-    return;
-}
-void c_isr177(int irq, int err){
-    return;
-}
-void c_isr178(int irq, int err){
-    return;
-}
-void c_isr179(int irq, int err){
-    return;
-}
-void c_isr180(int irq, int err){
-    return;
-}
-void c_isr181(int irq, int err){
-    return;
-}
-void c_isr182(int irq, int err){
-    return;
-}
-void c_isr183(int irq, int err){
-    return;
-}
-void c_isr184(int irq, int err){
-    return;
-}
-void c_isr185(int irq, int err){
-    return;
-}
-void c_isr186(int irq, int err){
-    return;
-}
-void c_isr187(int irq, int err){
-    return;
-}
-void c_isr188(int irq, int err){
-    return;
-}
-void c_isr189(int irq, int err){
-    return;
-}
-void c_isr190(int irq, int err){
-    return;
-}
-void c_isr191(int irq, int err){
-    return;
-}
-void c_isr192(int irq, int err){
-    return;
-}
-void c_isr193(int irq, int err){
-    return;
-}
-void c_isr194(int irq, int err){
-    return;
-}
-void c_isr195(int irq, int err){
-    return;
-}
-void c_isr196(int irq, int err){
-    return;
-}
-void c_isr197(int irq, int err){
-    return;
-}
-void c_isr198(int irq, int err){
-    return;
-}
-void c_isr199(int irq, int err){
-    return;
-}
-void c_isr200(int irq, int err){
-    return;
-}
-void c_isr201(int irq, int err){
-    return;
-}
-void c_isr202(int irq, int err){
-    return;
-}
-void c_isr203(int irq, int err){
-    return;
-}
-void c_isr204(int irq, int err){
-    return;
-}
-void c_isr205(int irq, int err){
-    return;
-}
-void c_isr206(int irq, int err){
-    return;
-}
-void c_isr207(int irq, int err){
-    return;
-}
-void c_isr208(int irq, int err){
-    return;
-}
-void c_isr209(int irq, int err){
-    return;
-}
-void c_isr210(int irq, int err){
-    return;
-}
-void c_isr211(int irq, int err){
-    return;
-}
-void c_isr212(int irq, int err){
-    return;
-}
-void c_isr213(int irq, int err){
-    return;
-}
-void c_isr214(int irq, int err){
-    return;
-}
-void c_isr215(int irq, int err){
-    return;
-}
-void c_isr216(int irq, int err){
-    return;
-}
-void c_isr217(int irq, int err){
-    return;
-}
-void c_isr218(int irq, int err){
-    return;
-}
-void c_isr219(int irq, int err){
-    return;
-}
-void c_isr220(int irq, int err){
-    return;
-}
-void c_isr221(int irq, int err){
-    return;
-}
-void c_isr222(int irq, int err){
-    return;
-}
-void c_isr223(int irq, int err){
-    return;
-}
-void c_isr224(int irq, int err){
-    return;
-}
-void c_isr225(int irq, int err){
-    return;
-}
-void c_isr226(int irq, int err){
-    return;
-}
-void c_isr227(int irq, int err){
-    return;
-}
-void c_isr228(int irq, int err){
-    return;
-}
-void c_isr229(int irq, int err){
-    return;
-}
-void c_isr230(int irq, int err){
-    return;
-}
-void c_isr231(int irq, int err){
-    return;
-}
-void c_isr232(int irq, int err){
-    return;
-}
-void c_isr233(int irq, int err){
-    return;
-}
-void c_isr234(int irq, int err){
-    return;
-}
-void c_isr235(int irq, int err){
-    return;
-}
-void c_isr236(int irq, int err){
-    return;
-}
-void c_isr237(int irq, int err){
-    return;
-}
-void c_isr238(int irq, int err){
-    return;
-}
-void c_isr239(int irq, int err){
-    return;
-}
-void c_isr240(int irq, int err){
-    return;
-}
-void c_isr241(int irq, int err){
-    return;
-}
-void c_isr242(int irq, int err){
-    return;
-}
-void c_isr243(int irq, int err){
-    return;
-}
-void c_isr244(int irq, int err){
-    return;
-}
-void c_isr245(int irq, int err){
-    return;
-}
-void c_isr246(int irq, int err){
-    return;
-}
-void c_isr247(int irq, int err){
-    return;
-}
-void c_isr248(int irq, int err){
-    return;
-}
-void c_isr249(int irq, int err){
-    return;
-}
-void c_isr250(int irq, int err){
-    return;
-}
-void c_isr251(int irq, int err){
-    return;
-}
-void c_isr252(int irq, int err){
-    return;
-}
-void c_isr253(int irq, int err){
-    return;
-}
-void c_isr254(int irq, int err){
-    return;
-}
-void c_isr255(int irq, int err){
-    return;
-}
 
 void (*ISRs[IDT_SIZE])(void) = {
 	irq0_handler,
@@ -1324,280 +555,36 @@ void (*ISRs[IDT_SIZE])(void) = {
 	irq255_handler
 };
 
-void (*c_ISRs[IDT_SIZE])(int, int) = {
-	c_isr0,
-	c_isr1,
-	c_isr2,
-	c_isr3,
-	c_isr4,
-	c_isr5,
-	c_isr6,
-	c_isr7,
-	c_isr8,
-	c_isr9,
-	c_isr10,
-	c_isr11,
-	c_isr12,
-	c_isr13,
-	c_isr14,
-	c_isr15,
-	c_isr16,
-	c_isr17,
-	c_isr18,
-	c_isr19,
-	c_isr20,
-	c_isr21,
-	c_isr22,
-	c_isr23,
-	c_isr24,
-	c_isr25,
-	c_isr26,
-	c_isr27,
-	c_isr28,
-	c_isr29,
-	c_isr30,
-	c_isr31,
-	c_isr32,
-	c_isr33,
-	c_isr34,
-	c_isr35,
-	c_isr36,
-	c_isr37,
-	c_isr38,
-	c_isr39,
-	c_isr40,
-	c_isr41,
-	c_isr42,
-	c_isr43,
-	c_isr44,
-	c_isr45,
-	c_isr46,
-	c_isr47,
-	c_isr48,
-	c_isr49,
-	c_isr50,
-	c_isr51,
-	c_isr52,
-	c_isr53,
-	c_isr54,
-	c_isr55,
-	c_isr56,
-	c_isr57,
-	c_isr58,
-	c_isr59,
-	c_isr60,
-	c_isr61,
-	c_isr62,
-	c_isr63,
-	c_isr64,
-	c_isr65,
-	c_isr66,
-	c_isr67,
-	c_isr68,
-	c_isr69,
-	c_isr70,
-	c_isr71,
-	c_isr72,
-	c_isr73,
-	c_isr74,
-	c_isr75,
-	c_isr76,
-	c_isr77,
-	c_isr78,
-	c_isr79,
-	c_isr80,
-	c_isr81,
-	c_isr82,
-	c_isr83,
-	c_isr84,
-	c_isr85,
-	c_isr86,
-	c_isr87,
-	c_isr88,
-	c_isr89,
-	c_isr90,
-	c_isr91,
-	c_isr92,
-	c_isr93,
-	c_isr94,
-	c_isr95,
-	c_isr96,
-	c_isr97,
-	c_isr98,
-	c_isr99,
-	c_isr100,
-	c_isr101,
-	c_isr102,
-	c_isr103,
-	c_isr104,
-	c_isr105,
-	c_isr106,
-	c_isr107,
-	c_isr108,
-	c_isr109,
-	c_isr110,
-	c_isr111,
-	c_isr112,
-	c_isr113,
-	c_isr114,
-	c_isr115,
-	c_isr116,
-	c_isr117,
-	c_isr118,
-	c_isr119,
-	c_isr120,
-	c_isr121,
-	c_isr122,
-	c_isr123,
-	c_isr124,
-	c_isr125,
-	c_isr126,
-	c_isr127,
-	c_isr128,
-	c_isr129,
-	c_isr130,
-	c_isr131,
-	c_isr132,
-	c_isr133,
-	c_isr134,
-	c_isr135,
-	c_isr136,
-	c_isr137,
-	c_isr138,
-	c_isr139,
-	c_isr140,
-	c_isr141,
-	c_isr142,
-	c_isr143,
-	c_isr144,
-	c_isr145,
-	c_isr146,
-	c_isr147,
-	c_isr148,
-	c_isr149,
-	c_isr150,
-	c_isr151,
-	c_isr152,
-	c_isr153,
-	c_isr154,
-	c_isr155,
-	c_isr156,
-	c_isr157,
-	c_isr158,
-	c_isr159,
-	c_isr160,
-	c_isr161,
-	c_isr162,
-	c_isr163,
-	c_isr164,
-	c_isr165,
-	c_isr166,
-	c_isr167,
-	c_isr168,
-	c_isr169,
-	c_isr170,
-	c_isr171,
-	c_isr172,
-	c_isr173,
-	c_isr174,
-	c_isr175,
-	c_isr176,
-	c_isr177,
-	c_isr178,
-	c_isr179,
-	c_isr180,
-	c_isr181,
-	c_isr182,
-	c_isr183,
-	c_isr184,
-	c_isr185,
-	c_isr186,
-	c_isr187,
-	c_isr188,
-	c_isr189,
-	c_isr190,
-	c_isr191,
-	c_isr192,
-	c_isr193,
-	c_isr194,
-	c_isr195,
-	c_isr196,
-	c_isr197,
-	c_isr198,
-	c_isr199,
-	c_isr200,
-	c_isr201,
-	c_isr202,
-	c_isr203,
-	c_isr204,
-	c_isr205,
-	c_isr206,
-	c_isr207,
-	c_isr208,
-	c_isr209,
-	c_isr210,
-	c_isr211,
-	c_isr212,
-	c_isr213,
-	c_isr214,
-	c_isr215,
-	c_isr216,
-	c_isr217,
-	c_isr218,
-	c_isr219,
-	c_isr220,
-	c_isr221,
-	c_isr222,
-	c_isr223,
-	c_isr224,
-	c_isr225,
-	c_isr226,
-	c_isr227,
-	c_isr228,
-	c_isr229,
-	c_isr230,
-	c_isr231,
-	c_isr232,
-	c_isr233,
-	c_isr234,
-	c_isr235,
-	c_isr236,
-	c_isr237,
-	c_isr238,
-	c_isr239,
-	c_isr240,
-	c_isr241,
-	c_isr242,
-	c_isr243,
-	c_isr244,
-	c_isr245,
-	c_isr246,
-	c_isr247,
-	c_isr248,
-	c_isr249,
-	c_isr250,
-	c_isr251,
-	c_isr252,
-	c_isr253,
-	c_isr254,
-	c_isr255
-};
+//array of the addresses for the c_isrs, will be initialized to zero
+//however, can be set with IRQ_set_handler
+void (*c_ISRs[IDT_SIZE])(int, int);
 
-void idt_init(void)
-{
-	unsigned long keyboard_address;
-	//unsigned long idt_address;
-	//unsigned long idt_ptr[2];
+//keyboard isr
+void keyboard_isr(int irq, int err){
+    asm("cli");
+    pollInputBuffer();
+    char val = inby(0x60);
+    keyboard_handler_main((char)val);
+    asm("sti");
+}
 
- 
-	//set the keyboard's isr to handle all possible interrupts because fuck it
-	/* populate IDT entry of keyboard's interrupt */
-	keyboard_address = (unsigned long)keyboard_handler; 
+//serial isr
+void serial_isr(int irq, int err){
+	asm("cli");
+    //indirect way to call consume byte
+    SER_write("",0);
+    asm("sti");
+}
 
-	printk("%lx\n", keyboard_handler);
-	printk("%lx\n", keyboard_address);
+void IRQ_set_handler(int irq, void *handler){
+    c_ISRs[irq] = handler;
+}
 
-	int i;
+
+void idt_init(void){
+    //fill the IDT with entries that contain relevant information and point to
+    //the respective assembly routines
+    int i;
 	for(i = 0; i < IDT_SIZE; i++){
 	    IDT_Entry *entry = IDT + i;
 	    entry->funct_ptr_1 = (uint64_t) ISRs[i] & 0x000000000000FFFF;
@@ -1611,12 +598,18 @@ void idt_init(void)
 	    entry->funct_ptr_2 = ((uint64_t) ISRs[i] & 0x00000000FFFF0000) >> 16;
 	    entry->funct_ptr_3 = ((uint64_t) ISRs[i] & 0xFFFFFFFF00000000) >> 32;
 	    entry->reserved = 0;
-	}
+    }
+
+    //zero out all of the c_ISRs
+    for(i = 0; i < IDT_SIZE; i++){
+        IRQ_set_handler(i, (void*)0);
+    }
+
 	/* here are the ports for the 2 PICs
 	 *
 	 * PIC1 cmd: 0x20 data: 0x21
 	 * PIC2 cmd: 0xA0 data: 0xA1
-	 */	
+	 */
 
 	/* ICW1 - begin initialization of the PIC */
 	outby(0x20, 0x11);
@@ -1639,45 +632,65 @@ void idt_init(void)
 	outby(0x21, 0x01);
 	outby(0xA1, 0x01);
 
-	//now done with initialization
-
-	//mask interrupts
+	//mask all interrupts
 	outby(0x21, 0xff);
 	outby(0xA1, 0xff);
 
-	/* fill the IDT descriptor */
-	//idt_address = (unsigned long)IDT;
-	//idt_ptr[0] = (sizeof (IDT_Entry) * IDT_SIZE) + ((idt_address & 0xffff) << 16);
-	//idt_ptr[1] = idt_address >> 16 ;
-
+    //todo, move this struct to the header file
     struct {
         uint16_t length;
         void*    base;
 	} __attribute__((packed)) IDTR = { sizeof(IDT_Entry) * 256, IDT };
 
+    //todo, move this to a macro in utils
 	asm ( "lidt %0" : : "m"(IDTR) );
 
-	//load_idt((unsigned long)IDTR);
+    //todo, move the isrs out of this file
+    //and then move these function calls somewhere else
+    IRQ_set_handler(33, keyboard_isr);
+    IRQ_set_handler(36, serial_isr);
 }
 
-void kb_init(void){
-	//mask all interrupts to off except for the keyboard IRQ1
-	// outby(0x21, 0xfd);
-	// outby(0xA1, 0x00);
-	outby(0x21, 0x01);
-	outby(0xa1, 0x00);
+void IRQ_set_mask(int IRQLine){
+    uint16_t port;
+    uint8_t value;
 
-	// asm ( "sti" );
+    if(IRQLine < 8){
+        port = 0x21;
+    }
+    else {
+        port = 0xA1;
+        IRQLine -= 8;
+    }
+    value = inby(port) | (1 << IRQLine);
+    outby(port, value);
+}
+
+void IRQ_clear_mask(int IRQLine){
+    uint16_t port;
+    uint8_t value;
+
+    if(IRQLine < 8) {
+        port = 0x21;
+    } else {
+        port = 0xA1;
+        IRQLine -= 8;
+    }
+    value = inby(port) & ~(1 << IRQLine);
+    outby(port, value);
 }
 
 void generic_c_isr(int irq, int err){
-    //printk("interrupted on %d", irq);
-    // if(err != -1){
-    //     printk(" with err: %d", err);
-    // }
-    // printk("\n");
+    void (*loadedHandler)(int, int) = c_ISRs[irq];
 
-	(c_ISRs[irq])(irq, err);
+    if(loadedHandler == 0){
+        //interrupt was triggered without a loaded isr in the IDT
+        printk("[ERR]: received interrupt on IRQ %d, however there was no ISR installed\n", irq);
+    }
+    else {
+        //ISR has been set and will be called
+        loadedHandler(irq, err);
+    }
 
 	if(irq > 8){
 		outby(0xA0, 0x20);

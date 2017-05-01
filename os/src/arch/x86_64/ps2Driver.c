@@ -127,36 +127,13 @@ void initialize_shift_down_dict(){
 	shift_down_dict['/'] = '?';
 }
 
+//todo - this could probably be removed
 char getCharFromScan(int scan){
 	return scancode_dict[scan];
 }
 
-// extern void outb(unsigned char value, unsigned short int port);
-// extern unsigned char inb(unsigned short int port);
-
-// struct ps2_config {
-// 	unsigned int interrupt1:1;
-// 	unsigned int interrupt2:1;
-// 	unsigned int systemFlag:1;
-// 	unsigned int zero:1;
-// 	unsigned int port1clk:1;
-// 	unsigned int port2clk:1;
-// 	unsigned int translation:1;
-// 	unsigned int zero2:1;
-// } __attribute__((packed));
-
-// struct ps2_status {
-// 	unsigned int out_buf_status:1;
-// 	unsigned int in_buf_status:1;
-// 	unsigned int sys_flag:1;
-// 	unsigned int cmd_or_data:1;
-// 	unsigned int unkn1:1;
-// 	unsigned int unkn2:1;
-// 	unsigned int time_out_err:1;
-// 	unsigned int parity_err:1;
-// } __attribute__((packed));
-
-// typedef struct ps2_config ps2_config;
+//todo - move these structures to the header file
+//todo - this really needs to be sanitized
 typedef struct {
     uint8_t output_buf:1;
     uint8_t input_buf:1;
@@ -168,6 +145,7 @@ typedef struct {
     uint8_t parity_err:1;
 } __attribute__((packed)) status;
 
+//todo - this really needs to be sanitized
 typedef struct {
     uint8_t first_int:1;
     uint8_t second_int:1;
@@ -179,6 +157,7 @@ typedef struct {
     uint8_t zero_1:1;
 } __attribute__((packed)) config;
 
+//todo - this really needs to be sanitized
 void initPs2() {
     config *cfg;
     uint8_t retVal;
