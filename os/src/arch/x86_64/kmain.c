@@ -3,10 +3,11 @@
 #include "ps2Driver.h"
 #include "idt.h"
 #include "serial.h"
+#include "parseMultiboot.h"
 
 extern void interrupt_test_wrapper();
 
-int kmain(){
+int kmain(void *multiboot_point, unsigned int multitest){
   asm("cli");
   int enabled = 0;
 
@@ -20,10 +21,23 @@ int kmain(){
   initialize_shift_down_dict();
   disableSerialPrinting();
 
+  // printk("multiboot_pointer %X\n", multiboot_point);
+  // printk("multiboot_test %X\n", multitest);
+
   //currently working without this, too scared to uncomment
   // initPs2();
   // keyboard_config();
-
+  // while (!enabled) ;
+  // TagStructureInfo *tagStructureInfo = (TagStructureInfo*)multiboot_point;
+  // uint32_t tagSize = getTotalTagSize(tagStructureInfo);
+  // printk("The total tag size is %d\n", tagSize);
+  // GenericTagHeader *curTag = (GenericTagHeader*)((uint64_t)tagStructureInfo + 8);
+  //
+  // printk("going to try starting the next tag at %x\n", curTag);
+  // while(curTag){
+  //     printTagInfo(curTag);
+  //     curTag = getNextTag(curTag);
+  // }
   //initialize interrupts
   idt_init();
   IRQ_clear_mask(KEYBOARD_IRQ);
@@ -34,12 +48,15 @@ int kmain(){
 
   //initialize serial tx interrupts and writing
   SER_init();
-  enableSerialPrinting();
+  // enableSerialPrinting();
 
-  //wait
+  printk("----SERIAL DEBUGGING BEGIN----\n");
+
+  printkTest();
+
+  // interrupt_test_wrapper();
+
   while(!enabled) ;
-
-  SER_write("----SERIAL DEBUGGING BEGIN----\n",31);
 
 
   return 0;

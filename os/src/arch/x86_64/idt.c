@@ -2,9 +2,16 @@
 #include "printk.h"
 #include "ps2Driver.h"
 #include "serial.h"
+#include "idt.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
+extern uint64_t gdt64[]; //pointer to the beginning of the old gdt
+extern uint64_t new_GDT[]; //pointer to the beginning of the new gdt
+gdt_tag gdt_desc;
+extern void load_gdt(void);
+extern void store_gdt(void);
+gdt_tag gdtTagStruct;
 
 extern void irq0_handler(void);
 extern void irq1_handler(void);
@@ -265,6 +272,26 @@ extern void irq255_handler(void);
 
 #define IDT_SIZE 256
 
+char ist_stack0[4096];
+char ist_stack1[4096];
+char ist_stack2[4096];
+char ist_stack3[4096];
+char ist_stack4[4096];
+char ist_stack5[4096];
+char ist_stack6[4096];
+
+uint64_t ist_stack0_top = (uint64_t) ist_stack0 + 4096;
+uint64_t ist_stack1_top = (uint64_t) ist_stack1 + 4096;
+uint64_t ist_stack2_top = (uint64_t) ist_stack2 + 4096;
+uint64_t ist_stack3_top = (uint64_t) ist_stack3 + 4096;
+uint64_t ist_stack4_top = (uint64_t) ist_stack4 + 4096;
+uint64_t ist_stack5_top = (uint64_t) ist_stack5 + 4096;
+uint64_t ist_stack6_top = (uint64_t) ist_stack6 + 4096;
+
+TaskStateSegment tss;
+TSS_Segment tss_seg;
+TSSDesc tssdesc;
+
 //todo remove all references to these and replace with the functions in
 //utils.c and ensure that the functionality is the same
 //note: port and val may be switched
@@ -294,7 +321,7 @@ typedef struct {
     uint32_t reserved;
 }__attribute__((packed)) IDT_Entry;
 
-IDT_Entry IDT[IDT_SIZE];
+IDT_Entry idt[IDT_SIZE];
 
 void (*ISRs[IDT_SIZE])(void) = {
 	irq0_handler,
@@ -561,35 +588,155 @@ void (*c_ISRs[IDT_SIZE])(int, int);
 
 //keyboard isr
 void keyboard_isr(int irq, int err){
-    asm("cli");
+    enableSerialPrinting();
     pollInputBuffer();
     char val = inby(0x60);
     keyboard_handler_main((char)val);
-    asm("sti");
+    disableSerialPrinting();
+}
+
+//handler for if an isr faults
+void double_fault_handler(int irq, int err){
+    printk("[ERR]: double fault]\n");
+    asm("hlt");
 }
 
 //serial isr
 void serial_isr(int irq, int err){
-	asm("cli");
     //indirect way to call consume byte
     SER_write("",0);
-    asm("sti");
+}
+
+void general_protection_fault_handler(int irq, int err){
+    printk("[ERR]: general protection fault\n");
+    asm("hlt");
+}
+
+void page_fault_handler(int irq, int err){
+    printk("[ERR]: page fault\n");
+    asm("hlt");
 }
 
 void IRQ_set_handler(int irq, void *handler){
     c_ISRs[irq] = handler;
 }
 
+//initialize all things required for having separate stacks for certain faults
+static void __attribute__((unused)) ist_init(){
+    //initialize the TSS
+    // tss.interrupt_stack_table[DOUBLE_FAULT_STACK] = (uint64_t)ist_stack0_top;
+    // tss.interrupt_stack_table[GENERAL_PROTECTION_STACK] = (uint64_t)ist_stack1_top;
+    // tss.interrupt_stack_table[PAGE_FAULT_STACK] = (uint64_t)ist_stack2_top;
+    tss.IST1 = (uint64_t)ist_stack0 + 4096;
+    tss.IST2 = (uint64_t)ist_stack1 + 4096;
+    tss.IST3 = (uint64_t)ist_stack2 + 4096;
+    tss.IST4 = (uint64_t)ist_stack3 + 4096;
+    tss.IST5 = (uint64_t)ist_stack4 + 4096;
+    tss.IST6 = (uint64_t)ist_stack5 + 4096;
+    tss.IST7 = (uint64_t)ist_stack6 + 4096;
+    int i;
+    for(i=0; i<7; i++)
+        tss.IOMap[i] = 0;
+    tss.IOMap[7] = -1;
+    tss.IOaddress = 104;
+
+    tss.res1 = 0;
+    tss.PST1 = 0;
+    tss.PST2 = 0;
+    tss.PST3 = 0;
+    tss.res2 = 0;
+    tss.res3 = 0;
+    tss.res4 = 0;
+
+    //initialize TSS segment
+    // uint64_t tss_ptr = (uint64_t)&tss;
+    //
+    // tss_seg.firstTSSLimit = (uint16_t) 112;//sizeof(TaskStateSegment) - 1; //todo this might be wrong
+    // tss_seg.firstTSSBase = tss_ptr & 0x0000000000FFFFFF;
+    // tss_seg.secondTSSBase = tss_ptr & 0x00000000FF000000 >> 24;
+    // tss_seg.lastTSSBase = tss_ptr & 0xFFFFFFFF00000000 >> 32;
+    // tss_seg.type = 0b1001; //0b1001
+    // tss_seg.zero = 0;
+    // tss_seg.privilege = 0;
+    // tss_seg.present = 1;
+    // tss_seg.secondTSSLimit = 0;
+    // tss_seg.ignored = 0;
+    // tss_seg.available = 0;
+    // tss_seg.granularity = 0;
+    // tss_seg.zero2 = 0;
+
+    TSSDesc *desc = &tssdesc;
+
+    desc->seg_limit_1 = 112;
+    desc->ptr_1 = (uint64_t)&tss& 0x000000000000FFFF;
+    desc->ptr_2 = ((uint64_t)&tss & 0x0000000000FF0000) >> 16;
+    desc->type = 0b1001;
+    desc->must_be_0_1 = 0;
+    desc->priv = 0;
+    desc->present = 1;
+    desc->seg_limit_2 = 0;
+    desc->avl = 0;
+    desc->res1 = 0;
+    desc->g = 0;
+    desc->ptr_3 = ((uint64_t)&tss & 0x00000000FF000000) >> 24;
+    desc->ptr_4 = ((uint64_t)&tss & 0xFFFFFFFF00000000) >> 32;
+    desc->must_be_0_2 = 0;
+
+    uint64_t *mask;
+    uint16_t selector = 0x10;
+    new_GDT[0] = gdt64[0];
+    new_GDT[1] = gdt64[1];
+    mask = (uint64_t*)desc;
+    new_GDT[2] = mask[0];
+    new_GDT[3] = mask[1];
+    gdt_desc.base = (uint64_t)new_GDT;
+    gdt_desc.limit = 4096;
+    asm( "lgdt gdt_desc"); // pass this a GDT desc
+    asm( "ltr %0" : : "m"(selector) );
+
+    // uint64_t *tss_seg_pointer = (uint64_t*)&tss_seg;
+    // uint16_t selector = 0x10;
+    // // gdt_with_tss[0] = gdt64[0];
+    // // gdt_with_tss[1] = gdt64[1];
+    // // gdt_with_tss[2] = tss_seg_pointer[0];
+    // // gdt_with_tss[3] = tss_seg_pointer[1];
+    // gdt64[2] = tss_seg_pointer[0];
+    // gdt64[3] = tss_seg_pointer[1];
+    // // gdtTagStruct.base = (uint64_t)gdt_with_tss;
+    // // gdtTagStruct.limit = 4096;
+    // // load_gdt();
+    // // store_gdt();
+    // // asm( "lgdt gdtTagStruct"); // pass this a GDT desc
+    // asm( "ltr %0" : : "m"(selector) );
+}
 
 void idt_init(void){
     //fill the IDT with entries that contain relevant information and point to
     //the respective assembly routines
     int i;
+    uint16_t istNum;
 	for(i = 0; i < IDT_SIZE; i++){
-	    IDT_Entry *entry = IDT + i;
+	    IDT_Entry *entry = idt + i;
 	    entry->funct_ptr_1 = (uint64_t) ISRs[i] & 0x000000000000FFFF;
 	    entry->gdt_select = 0x08;
-	    entry->ist = 0;
+        //conditionally set the ist
+        istNum = GENERAL_INTERRUPT_STACK;
+
+        if(i == GENERAL_PROTECTION_FAULT_EX){
+            istNum = GENERAL_PROTECTION_FAULT_EX;
+        }
+        else if (i == DOUBLE_FAULT_EX){
+            istNum = DOUBLE_FAULT_STACK;
+        }
+        else if(i == PAGE_FAULT_EX){
+            istNum = PAGE_FAULT_STACK;
+        }
+        //this is for testing, mapping the keyboard interrupt to another stack
+        else if(i == 33){
+            istNum = 4;
+        }
+
+        entry->ist = istNum;
 	    entry->res = 0;
 	    entry->type = 0xF;
 	    entry->must_be_0 = 0;
@@ -640,7 +787,7 @@ void idt_init(void){
     struct {
         uint16_t length;
         void*    base;
-	} __attribute__((packed)) IDTR = { sizeof(IDT_Entry) * 256, IDT };
+	} __attribute__((packed)) IDTR = { sizeof(IDT_Entry) * 256, idt };
 
     //todo, move this to a macro in utils
 	asm ( "lidt %0" : : "m"(IDTR) );
@@ -649,6 +796,11 @@ void idt_init(void){
     //and then move these function calls somewhere else
     IRQ_set_handler(33, keyboard_isr);
     IRQ_set_handler(36, serial_isr);
+    IRQ_set_handler(8, double_fault_handler);
+    IRQ_set_handler(GENERAL_PROTECTION_FAULT_EX, general_protection_fault_handler);
+    IRQ_set_handler(PAGE_FAULT_EX, page_fault_handler);
+
+    ist_init();
 }
 
 void IRQ_set_mask(int IRQLine){
@@ -681,6 +833,7 @@ void IRQ_clear_mask(int IRQLine){
 }
 
 void generic_c_isr(int irq, int err){
+    disableSerialPrinting();
     void (*loadedHandler)(int, int) = c_ISRs[irq];
 
     if(loadedHandler == 0){
@@ -692,8 +845,9 @@ void generic_c_isr(int irq, int err){
         loadedHandler(irq, err);
     }
 
-	if(irq > 8){
+    if(irq > 8){
 		outby(0xA0, 0x20);
 	}
 	outby(0x20, 0x20);
+    enableSerialPrinting();
 }

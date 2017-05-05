@@ -1,11 +1,16 @@
 global start
-global _idt
+global multiboot_pointer
+global multiboot_test
+global gdt64
 extern long_mode_start
 
 section .text
 bits 32
 start:
 	mov esp, stack_top
+
+	mov [multiboot_pointer], ebx
+	mov [multiboot_test], eax
 
 	call check_multiboot
 	call check_cpuid
@@ -19,6 +24,10 @@ start:
     jmp gdt64.code:long_mode_start
 
 	hlt
+
+load_gdt:
+	lgdt [gdt64.pointer]
+	ret
 
 ; prints `ERR: ` and the given error code to screen and hangs.
 ; parameter: error code (in ascii) in al
@@ -152,17 +161,21 @@ stack_bottom:
 	resb 64
 stack_top:
 
+
 section .rodata
 idt_48:
     dw 0
     dw 0,0
 
-_idt:   resb 256
+multiboot_pointer: dq 0
+multiboot_test: dq 0
 
 gdt64:
     dq 0 ; zero entry
 .code: equ $ - gdt64
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment    
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
+	dq 0 ; keep this open for the tss
+	dq 0 ; keep this open for the tss
 .pointer:
     dw $ - gdt64 - 1
     dq gdt64

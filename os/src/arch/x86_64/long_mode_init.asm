@@ -3,11 +3,10 @@ global halt_wrapper
 global VGA_clear
 global VGA_display_char
 global VGA_display_str
-; global write_port
-; global read_port
 global load_idt
 global keyboard_handler
 global interrupt_test_wrapper
+global new_GDT
 
 global irq0_handler
 global irq1_handler
@@ -270,6 +269,8 @@ extern kmain
 extern _idt
 extern keyboard_handler_main
 extern generic_c_isr
+extern multiboot_pointer
+extern multiboot_test
 
 section .text
 bits 64
@@ -285,6 +286,9 @@ long_mode_start:
 	;print OKAY
 	mov rax, 0x2f592f412d4b2d4f
     mov qword [0xb8000], rax
+
+    mov rdi, [multiboot_pointer]
+    mov rsi, [multiboot_test]
 
     call kmain
     hlt
@@ -303,7 +307,6 @@ interrupt_test_wrapper:
 load_idt:
     mov rax, [rdi]
     lidt [rdi]
-    sti
     ret
 
 keyboard_handler:
@@ -487,196 +490,235 @@ irq_gen_err_handler:
     iretq
 
 irq0_handler:
+    cli
     push rdi
     mov rdi, 0
     jmp generic_irq_handler
 
 irq1_handler:
+    cli
     push rdi
     mov rdi, 1
     jmp generic_irq_handler
 
 irq2_handler:
+    cli
     push rdi
     mov rdi, 2
     jmp generic_irq_handler
 
 irq3_handler:
+    cli
     push rdi
     mov rdi, 3
     jmp generic_irq_handler
 
 irq4_handler:
+    cli
     push rdi
     mov rdi, 4
     jmp generic_irq_handler
 
 irq5_handler:
+    cli
     push rdi
     mov rdi, 5
     jmp generic_irq_handler
 
 irq6_handler:
+    cli
     push rdi
     mov rdi, 6
     jmp generic_irq_handler
 
 irq7_handler:
+    cli
     push rdi
     mov rdi, 7
     jmp generic_irq_handler
 
 irq8_handler:
+    cli
     push rdi
     mov rdi, 8
     jmp generic_irq_handler
 
 irq9_handler:
+    cli
     push rdi
     mov rdi, 9
     jmp generic_irq_handler
 
 irq10_handler:
+    cli
     push rdi
     mov rdi, 10
     jmp generic_irq_handler
 
 irq11_handler:
+    cli
     push rdi
     mov rdi, 11
     jmp generic_irq_handler
 
 irq12_handler:
+    cli
     push rdi
     mov rdi, 12
     jmp generic_irq_handler
 
 irq13_handler:
+    cli
     push rdi
     mov rdi, 13
     jmp generic_irq_handler
 
 irq14_handler:
+    cli
     push rdi
     mov rdi, 14
     jmp generic_irq_handler
 
 irq15_handler:
+    cli
     push rdi
     mov rdi, 15
     jmp generic_irq_handler
 
 irq16_handler:
+    cli
     push rdi
     mov rdi, 16
     jmp generic_irq_handler
 
 irq17_handler:
+    cli
     push rdi
     mov rdi, 17
     jmp generic_irq_handler
 
 irq18_handler:
+    cli
     push rdi
     mov rdi, 18
     jmp generic_irq_handler
 
 irq19_handler:
+    cli
     push rdi
     mov rdi, 19
     jmp generic_irq_handler
 
 irq20_handler:
+    cli
     push rdi
     mov rdi, 20
     jmp generic_irq_handler
 
 irq21_handler:
+    cli
     push rdi
     mov rdi, 21
     jmp generic_irq_handler
 
 irq22_handler:
+    cli
     push rdi
     mov rdi, 22
     jmp generic_irq_handler
 
 irq23_handler:
+    cli
     push rdi
     mov rdi, 23
     jmp generic_irq_handler
 
 irq24_handler:
+    cli
     push rdi
     mov rdi, 24
     jmp generic_irq_handler
 
 irq25_handler:
+    cli
     push rdi
     mov rdi, 25
     jmp generic_irq_handler
 
 irq26_handler:
+    cli
     push rdi
     mov rdi, 26
     jmp generic_irq_handler
 
 irq27_handler:
+    cli
     push rdi
     mov rdi, 27
     jmp generic_irq_handler
 
 irq28_handler:
+    cli
     push rdi
     mov rdi, 28
     jmp generic_irq_handler
 
 irq29_handler:
+    cli
     push rdi
     mov rdi, 29
     jmp generic_irq_handler
 
 irq30_handler:
+    cli
     push rdi
     mov rdi, 30
     jmp generic_irq_handler
 
 irq31_handler:
+    cli
     push rdi
     mov rdi, 31
     jmp generic_irq_handler
 
 irq32_handler:
+    cli
     push rdi
     mov rdi, 32
     jmp generic_irq_handler
 
 irq33_handler:
+    cli
     push rdi
     mov rdi, 33
     jmp generic_irq_handler
 
 irq34_handler:
+    cli
     push rdi
     mov rdi, 34
     jmp generic_irq_handler
 
 irq35_handler:
+    cli
     push rdi
     mov rdi, 35
     jmp generic_irq_handler
 
 irq36_handler:
+    cli
     push rdi
     mov rdi, 36
     jmp generic_irq_handler
 
 irq37_handler:
+    cli
     push rdi
     mov rdi, 37
     jmp generic_irq_handler
 
 irq38_handler:
+    cli
     push rdi
     mov rdi, 38
     jmp generic_irq_handler
@@ -1779,3 +1821,8 @@ white_on_black DQ 0x0700
 newline_char DB 0x0a
 backspace_char DB 0x08
 cursor_char DQ 0x075f
+
+section .bss
+align 4096
+new_GDT
+    resb 4096
