@@ -1,14 +1,22 @@
 This is the repository containing the implementation of a x86_64 operating system for CPE454.
 
-Currently I have the following milestones complete:
-1. Setup Development environment
-2. Boot OS in Long Mode
-3. VGA text mode and printk
-4. Polling keyboard driver (now removed with interrupt implementation)
-5. Handle Interrupts (Interface is only partially implemented)
-6. Interrupt-Driven Serial Output (Interface is only partially implemented)
+### Status
+#### Currently I have the following milestones complete:
+1. ~~Setup Development environment~~
+2. ~~Boot OS in Long Mode~~
+3. ~~VGA text mode and printk~~
+4. ~~Polling keyboard driver (now removed with interrupt implementation)~~
+5. ~~Handle Interrupts~~
+6. ~~Interrupt-Driven Serial Output~~
+7. ~~Interrupt Stack Table Working~~
+#### Milestones that still need to be implemented:
+7. Parse Multiboot tags and Page Frame Allocator
+8. Virtual Page Allocator
+9. Heap allocator
+10. Cooperative Multitasking
+11. Process Management and Keyboard Driver
 
-Things that need to be done/fixed in current code:
+#### Things that need to be done/fixed in current code:
 * Move everything not pertaining to booting into long mode into separate files
 * Fully implement the Interrupt Interface (requires the implementation of the following functions)
   * void IRQ_set_mask(int irq);
@@ -33,3 +41,5 @@ Milestones that still need to be implemented:
 
 ####Miscellaneous notes####
 * Figure out what inline function tag does
+=======
+* Make sure that there are no race conditions in the implemented code
