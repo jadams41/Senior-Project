@@ -289,8 +289,8 @@ uint64_t ist_stack5_top = (uint64_t) ist_stack5 + 4096;
 uint64_t ist_stack6_top = (uint64_t) ist_stack6 + 4096;
 
 TaskStateSegment tss;
-TSS_Segment tss_seg;
 TSSDesc tssdesc;
+TSS_Segment tss_seg;
 
 //todo remove all references to these and replace with the functions in
 //utils.c and ensure that the functionality is the same
@@ -624,9 +624,6 @@ void IRQ_set_handler(int irq, void *handler){
 //initialize all things required for having separate stacks for certain faults
 static void __attribute__((unused)) ist_init(){
     //initialize the TSS
-    // tss.interrupt_stack_table[DOUBLE_FAULT_STACK] = (uint64_t)ist_stack0_top;
-    // tss.interrupt_stack_table[GENERAL_PROTECTION_STACK] = (uint64_t)ist_stack1_top;
-    // tss.interrupt_stack_table[PAGE_FAULT_STACK] = (uint64_t)ist_stack2_top;
     tss.IST1 = (uint64_t)ist_stack0 + 4096;
     tss.IST2 = (uint64_t)ist_stack1 + 4096;
     tss.IST3 = (uint64_t)ist_stack2 + 4096;
@@ -649,65 +646,27 @@ static void __attribute__((unused)) ist_init(){
     tss.res4 = 0;
 
     //initialize TSS segment
-    // uint64_t tss_ptr = (uint64_t)&tss;
-    //
-    // tss_seg.firstTSSLimit = (uint16_t) 112;//sizeof(TaskStateSegment) - 1; //todo this might be wrong
-    // tss_seg.firstTSSBase = tss_ptr & 0x0000000000FFFFFF;
-    // tss_seg.secondTSSBase = tss_ptr & 0x00000000FF000000 >> 24;
-    // tss_seg.lastTSSBase = tss_ptr & 0xFFFFFFFF00000000 >> 32;
-    // tss_seg.type = 0b1001; //0b1001
-    // tss_seg.zero = 0;
-    // tss_seg.privilege = 0;
-    // tss_seg.present = 1;
-    // tss_seg.secondTSSLimit = 0;
-    // tss_seg.ignored = 0;
-    // tss_seg.available = 0;
-    // tss_seg.granularity = 0;
-    // tss_seg.zero2 = 0;
+    uint64_t tss_ptr = (uint64_t)&tss;
 
-    TSSDesc *desc = &tssdesc;
+    tss_seg.firstTSSLimit = (uint16_t) 112;//sizeof(TaskStateSegment) - 1; //todo this might be wrong
+    tss_seg.firstTSSBase = tss_ptr & 0x0000000000FFFFFF;
+    tss_seg.secondTSSBase = (tss_ptr & 0x00000000FF000000) >> 24;
+    tss_seg.lastTSSBase = (tss_ptr & 0xFFFFFFFF00000000) >> 32;
+    tss_seg.type = 0b1001; //0b1001
+    tss_seg.zero = 0;
+    tss_seg.privilege = 0;
+    tss_seg.present = 1;
+    tss_seg.secondTSSLimit = 0;
+    tss_seg.ignored = 0;
+    tss_seg.available = 0;
+    tss_seg.granularity = 0;
+    tss_seg.zero2 = 0;
 
-    desc->seg_limit_1 = 112;
-    desc->ptr_1 = (uint64_t)&tss& 0x000000000000FFFF;
-    desc->ptr_2 = ((uint64_t)&tss & 0x0000000000FF0000) >> 16;
-    desc->type = 0b1001;
-    desc->must_be_0_1 = 0;
-    desc->priv = 0;
-    desc->present = 1;
-    desc->seg_limit_2 = 0;
-    desc->avl = 0;
-    desc->res1 = 0;
-    desc->g = 0;
-    desc->ptr_3 = ((uint64_t)&tss & 0x00000000FF000000) >> 24;
-    desc->ptr_4 = ((uint64_t)&tss & 0xFFFFFFFF00000000) >> 32;
-    desc->must_be_0_2 = 0;
-
-    uint64_t *mask;
+    uint64_t *tss_seg_pointer = (uint64_t*)&tss_seg;
     uint16_t selector = 0x10;
-    new_GDT[0] = gdt64[0];
-    new_GDT[1] = gdt64[1];
-    mask = (uint64_t*)desc;
-    new_GDT[2] = mask[0];
-    new_GDT[3] = mask[1];
-    gdt_desc.base = (uint64_t)new_GDT;
-    gdt_desc.limit = 4096;
-    asm( "lgdt gdt_desc"); // pass this a GDT desc
+    gdt64[2] = tss_seg_pointer[0];
+    gdt64[3] = tss_seg_pointer[1];
     asm( "ltr %0" : : "m"(selector) );
-
-    // uint64_t *tss_seg_pointer = (uint64_t*)&tss_seg;
-    // uint16_t selector = 0x10;
-    // // gdt_with_tss[0] = gdt64[0];
-    // // gdt_with_tss[1] = gdt64[1];
-    // // gdt_with_tss[2] = tss_seg_pointer[0];
-    // // gdt_with_tss[3] = tss_seg_pointer[1];
-    // gdt64[2] = tss_seg_pointer[0];
-    // gdt64[3] = tss_seg_pointer[1];
-    // // gdtTagStruct.base = (uint64_t)gdt_with_tss;
-    // // gdtTagStruct.limit = 4096;
-    // // load_gdt();
-    // // store_gdt();
-    // // asm( "lgdt gdtTagStruct"); // pass this a GDT desc
-    // asm( "ltr %0" : : "m"(selector) );
 }
 
 void idt_init(void){

@@ -7,6 +7,7 @@ global load_idt
 global keyboard_handler
 global interrupt_test_wrapper
 global new_GDT
+global cur_char_color
 
 global irq0_handler
 global irq1_handler
@@ -352,7 +353,7 @@ VGA_display_char:
     je VGA_print_newline
 
     ; format the register of the input variable to be white
-    or rdi, [white_on_black]
+    or rdi, [cur_char_color]
     ; print the character to the current terminal position
     mov [rax], rdi
     ; increment the current terminal postion
@@ -1818,6 +1819,8 @@ vga_buf_cur DQ 0xb8000
 vga_buf_line_len DQ 0xa0
 vga_char_len DD 0x2
 white_on_black DQ 0x0700
+red_on_black DQ 0x0c00
+cur_char_color DQ 0x0700
 newline_char DB 0x0a
 backspace_char DB 0x08
 cursor_char DQ 0x075f

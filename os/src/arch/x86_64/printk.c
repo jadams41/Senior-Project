@@ -3,24 +3,9 @@
 #include "serial.h"
 #include <stdint-gcc.h>
 
-//this variable is used to disable serial writing
-//only time it should really be set is when printing errors from
-//inside serial ISR (to avoid infinite call loop)
-static char serialDisabled = 1;
-
-void disableSerialPrinting(){
-	serialDisabled = 1;
-}
-
-void enableSerialPrinting(){
-	serialDisabled = 0;
-}
-
 void printCharToVGAandSER(char c){
 	VGA_display_char(c);
-	
-	if(!serialDisabled) 
-		SER_write(&c,1);
+	SER_write(&c,1);
 }
 
 void printLineAcrossScreen(){
@@ -31,7 +16,7 @@ void printLineAcrossScreen(){
 }
 
 /**
- * recursively prints an integer through modulo 
+ * recursively prints an integer through modulo
  * and division manipulation
  */
 void printInteger(int i){
@@ -163,7 +148,7 @@ void printHexQuad(unsigned long long l){
  * %l[dux] long [d] integer, [u] unsigned, or [h] hex
  * %q[dux] quad [d] integer, [u] unsigned, or [h] hex
  *
- * Note: for every character written, that character will 
+ * Note: for every character written, that character will
  * also be printed to the Serial Port #1
  */
 void printk(const char *fmtStr, ...) {
@@ -251,6 +236,8 @@ void printk(const char *fmtStr, ...) {
 		}
 	}
 }
+
+
 
 void vgaDispCharTest(){
   printCharToVGAandSER('t');

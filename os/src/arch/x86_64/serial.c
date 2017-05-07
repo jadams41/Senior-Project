@@ -8,6 +8,18 @@ State curState;
 int stateInitialized = 0;
 static int hwBusy = 1;
 
+//this variable is used to disable serial writing
+//only time it should really be set is when printing errors from
+//inside serial ISR (to avoid infinite call loop)
+static char serialDisabled = 1;
+
+void disableSerialPrinting(){
+	serialDisabled = 1;
+}
+
+void enableSerialPrinting(){
+	serialDisabled = 0;
+}
 static void init_state(State *state){
 	state->head = &state->buff[0];
 	state->tail = &state->buff[0];
@@ -101,15 +113,15 @@ static void clearLineStatus(){
  */
 
 int SER_write(const char *buff, int len){
+	//check if there are things in the buffer first
+	consumer_next(&curState);
+
 
 	int buffFull = 0, charsWritten = 0;
 	while(len--){
 		buffFull = !producer_add_char(*buff, &curState);
 		buff += sizeof(char);
 		if(buffFull){
-			disableSerialPrinting();
-			// printk("failed writing to serial driver buffer, ran out of buffer space\n");
-			enableSerialPrinting();
 			return charsWritten;
 		}
 		charsWritten++;
@@ -119,7 +131,8 @@ int SER_write(const char *buff, int len){
 
 	//hardware is ready => write byte to fifo
 	if(!hwBusy){
-		consumer_next(&curState);
+		if(!serialDisabled)
+			consumer_next(&curState);
 	}
 	//line status indicates hardware is busy
 	//clear the overrun error bit and do not attempt to write

@@ -102,7 +102,7 @@ typedef struct {
     uint8_t zero:1; //must be 0
     uint8_t privilege:2; //privilege level
     uint8_t present:1; //must be 1 for valid selector
-    uint8_t secondTSSLimit:3; //we won't need this
+    uint8_t secondTSSLimit:4; //we won't need this
     uint8_t available:1;
     uint8_t ignored:2;
     uint8_t granularity:1; //don't need

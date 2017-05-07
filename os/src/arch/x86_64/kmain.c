@@ -52,9 +52,9 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   printk("----SERIAL DEBUGGING BEGIN----\n");
 
-  printkTest();
+  // printkTest();
 
-  // interrupt_test_wrapper();
+  interrupt_test_wrapper();
 
   while(!enabled) ;
 

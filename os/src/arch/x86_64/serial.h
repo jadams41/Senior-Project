@@ -34,5 +34,7 @@ typedef struct {
 
 void SER_init();
 int SER_write(const char *buff, int len);
+void disableSerialPrinting();
+void enableSerialPrinting();
 
 #endif
