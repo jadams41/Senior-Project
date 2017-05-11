@@ -2,6 +2,7 @@
 #define PARSE_MULTIBOOT
 
 #include "printk.h"
+#include "memoryManager.h"
 #include <stdint-gcc.h>
 
 #define PADDING_TAG 0
@@ -50,7 +51,7 @@ typedef struct {
 typedef struct {
     uint32_t type;
     uint32_t size;
-    
+
     //variable size c string, null terminated
     char cmdLineCStr;
 }__attribute__((packed)) BootCommandLineTag;
@@ -77,7 +78,7 @@ typedef struct {
 
     uint32_t memoryInfoEntrySize;
     uint32_t version;
-    MemoryMapEntry *map;
+    MemoryMapEntry map;
 }__attribute__((packed)) MemoryMap;
 
 typedef struct {
@@ -104,12 +105,13 @@ typedef struct {
     uint32_t sizeOfSectionHeaderEntry;
     uint32_t sectionIndexContainingStrTable;
 
-    ElfSectionHeader *headerArr;
+    ElfSectionHeader headerArr;
 }__attribute__((packed)) ElfSymbols;
 
 //functions
 uint32_t getTotalTagSize(TagStructureInfo*);
 GenericTagHeader *getNextTag(GenericTagHeader*);
 void printTagInfo(GenericTagHeader*);
+void potentiallyUseTag(GenericTagHeader *tag, memory_info* memInfo);
 
 #endif
