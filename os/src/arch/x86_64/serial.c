@@ -47,14 +47,14 @@ static void consume_byte(char b){
 }
 
 static void consumer_next(State *state){
+	if(state->head >= &state->buff[BUFF_SIZE]){
+		state->head = &state->buff[0];
+	}
 	if(state->head == state->tail){
 		return;
 	}
 	char *c_to_consume = state->head++;
 	consume_byte(*c_to_consume);
-	if(state->head >= &state->buff[BUFF_SIZE]){
-		state->head = &state->buff[0];
-	}
 }
 
 static int producer_add_char(char toAdd, State *state){
