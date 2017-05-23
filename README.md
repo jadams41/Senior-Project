@@ -33,5 +33,4 @@ This is the repository containing the implementation of a x86_64 operating syste
     * Implemented this for #pf but still need to do for all other excpetions that push error codes
 ####Miscellaneous notes####
 * Figure out what inline function tag does
-=======
 * Make sure that there are no race conditions in the implemented code
