@@ -30,7 +30,7 @@ static void fillPageFrame(void *pf){
     }
 }
 
-static void checkPageFrame(void *pf){
+static void __attribute__((unused)) checkPageFrame(void *pf){
     char *testStr = "abcdefghijklmnop";
     int i,j;
     char *currentPositionInsideFrame = (char*)pf;
@@ -45,26 +45,26 @@ static void checkPageFrame(void *pf){
     }
 }
 
-void page_frame_allocation_test(memory_info *memInfo){
+void page_frame_allocation_test(){
     void *pf1, *pf2, *pf3;
     printk("frame allocation test\n");
-    pf1 = MMU_pf_alloc(memInfo);
-    pf2 = MMU_pf_alloc(memInfo);
+    pf1 = MMU_pf_alloc();
+    pf2 = MMU_pf_alloc();
     printk("Allocated 2 pages %lx and %lx\n", pf1, pf2);
 
-    MMU_pf_free(memInfo, pf2);
+    MMU_pf_free(pf2);
     printk("Freed %lx\n", pf2);
 
-    pf3 = MMU_pf_alloc(memInfo);
+    pf3 = MMU_pf_alloc();
     printk("Allocated new page %lx\n", pf3);
 
-    MMU_pf_free(memInfo, pf1);
-    MMU_pf_free(memInfo, pf3);
+    MMU_pf_free(pf1);
+    MMU_pf_free(pf3);
 
     printk("going to attempt to used all of the pages\n");
     int numberOfPagesAllocated = 0;
     while(1){
-        pf1 = MMU_pf_alloc(memInfo);
+        pf1 = MMU_pf_alloc();
         if(pf1 == 0){
             break;
         }
@@ -72,19 +72,19 @@ void page_frame_allocation_test(memory_info *memInfo){
         numberOfPagesAllocated++;
     }
     printk("was able to allocate %d pages\n", numberOfPagesAllocated);
-    printk("going to test the page frames now\n");
-    frame_list_node *walker = memInfo->used_frames_list;
-
-    numberOfPagesAllocated = 0;
-    while(walker != 0){
-        checkPageFrame((void*)walker->beg_addr);
-        walker = walker->next_frame;
-        numberOfPagesAllocated++;
-    }
-
-    printk("checked %d pages\n", numberOfPagesAllocated);
-    pf1 = (void*)memInfo->used_frames_list->beg_addr;
-    char *pageAsString = (char*)pf1;
-    pageAsString[4095] = 0;
-    printk("%s", pageAsString);
+    // printk("going to test the page frames now\n");
+    // frame_list_node *walker = memInfo->used_frames_list;
+    //
+    // numberOfPagesAllocated = 0;
+    // while(walker != 0){
+    //     checkPageFrame((void*)walker->beg_addr);
+    //     walker = walker->next_frame;
+    //     numberOfPagesAllocated++;
+    // }
+    //
+    // printk("checked %d pages\n", numberOfPagesAllocated);
+    // pf1 = (void*)memInfo->used_frames_list->beg_addr;
+    // char *pageAsString = (char*)pf1;
+    // pageAsString[4095] = 0;
+    // printk("%s", pageAsString);
 }

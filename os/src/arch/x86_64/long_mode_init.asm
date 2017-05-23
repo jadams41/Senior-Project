@@ -6,8 +6,12 @@ global VGA_display_str
 global load_idt
 global keyboard_handler
 global interrupt_test_wrapper
+global store_control_registers
 global new_GDT
 global cur_char_color
+global load_page_table
+global saved_cr2
+global saved_cr3
 
 global irq0_handler
 global irq1_handler
@@ -297,17 +301,26 @@ long_mode_start:
 halt_wrapper:
     hlt
 
+load_page_table:
+	mov cr3, rdi
+	ret
+
 interrupt_test_wrapper:
-    int 30
-    int 31
-    int 32
-    int 33
-    int 34
+    int 14
     ret
 
 load_idt:
     mov rax, [rdi]
     lidt [rdi]
+    ret
+
+store_control_registers:
+    push rax
+    mov rax, cr2
+    mov [saved_cr2], rax
+    mov rax, cr3
+    mov [saved_cr3], rax
+    pop rax
     ret
 
 keyboard_handler:
@@ -570,15 +583,26 @@ irq12_handler:
 
 irq13_handler:
     cli
+    mov [isr_err_code], rsp ; save the current rsp before it gets changed from pushes
     push rdi
     mov rdi, 13
-    jmp generic_irq_handler
+    push rsi
+    mov rsi, [isr_err_code] ; move the original rsp into rsi
+    mov rsi, [rsi] ; move whats at the original rsp (err code) into rsi
+    jmp irq_gen_err_handler
 
 irq14_handler:
     cli
+    pop qword [isr_err_code] ; remove error code from the stack so that iretq doesn't vomit
     push rdi
+    mov rdi, cr2
+    mov [saved_cr2], rdi
+    mov rdi, cr3
+    mov [saved_cr3], rdi
     mov rdi, 14
-    jmp generic_irq_handler
+    push rsi
+    mov rsi, [isr_err_code]
+    jmp irq_gen_err_handler
 
 irq15_handler:
     cli
@@ -1824,6 +1848,9 @@ cur_char_color DQ 0x0700
 newline_char DB 0x0a
 backspace_char DB 0x08
 cursor_char DQ 0x075f
+saved_cr2 DQ 0x0
+saved_cr3 DQ 0x0
+isr_err_code DQ 0x0
 
 section .bss
 align 4096

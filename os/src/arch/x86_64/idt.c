@@ -3,6 +3,8 @@
 #include "ps2Driver.h"
 #include "serial.h"
 #include "idt.h"
+#include "memoryManager.h"
+#include "utils.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -11,6 +13,10 @@ extern uint64_t new_GDT[]; //pointer to the beginning of the new gdt
 gdt_tag gdt_desc;
 extern void load_gdt(void);
 extern void store_gdt(void);
+
+extern uint64_t saved_cr2;
+extern uint64_t saved_cr3;
+
 gdt_tag gdtTagStruct;
 
 extern void irq0_handler(void);
@@ -613,8 +619,46 @@ void general_protection_fault_handler(int irq, int err){
 }
 
 void page_fault_handler(int irq, int err){
-    printk("[ERR]: page fault\n");
-    asm("hlt");
+    //saved cr2 is the faulting address that the program tried to acces
+    //saved cr3 is the address of the base of the page (level 4) table
+    uint64_t p4_index, p3_index, p2_index, p1_index, grabber = 0b111111111; //grabber grabs the 9 bit index into the given table
+
+    grabber <<= 12;
+    p1_index = (saved_cr2 & grabber) >> 12;
+    grabber <<= 9;
+    p2_index = (saved_cr2 & grabber) >> 21;
+    grabber <<= 9;
+    p3_index = (saved_cr2 & grabber) >> 30;
+    grabber <<= 9;
+    p4_index = (saved_cr2 & grabber) >> 39;
+
+    //grab the index of the page 3 table pointed to by p4 index (from cr2) into the saved_cr3 (p4_table)
+    uint64_t *table_ptr = (uint64_t*)((uint64_t*)saved_cr3)[p4_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    table_ptr = (uint64_t*)table_ptr[p3_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    table_ptr = (uint64_t*)table_ptr[p2_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    if((table_ptr[p1_index] & 0b111000000000) == 0){
+        page_table_error:
+        printk("[ERR]: page fault on non-on-demand page\n");
+        printk("   Fault details: cr2=0x%lx cr3=0x%lx", saved_cr2, saved_cr3);
+        asm("hlt");
+    }
+    else {
+        printk("on demand paging working!\n");
+        void *newPage = MMU_pf_alloc();
+        uint64_t pg = (uint64_t)newPage;
+        zero_out_page(newPage);
+        pg |= 0b1000000011; //set available and write
+        table_ptr[p1_index] = pg;
+    }
 }
 
 void IRQ_set_handler(int irq, void *handler){

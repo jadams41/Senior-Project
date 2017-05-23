@@ -42,14 +42,20 @@ typedef struct {
     frame_list_node *free_frames_list;
     frame_list_node *used_frames_list;
     current_node_holder_frame node_frame;
+
+    uint64_t end_of_memory;
 } memory_info;
 
 
-void init_usable_segment_struct(memory_info*);
-void add_segment(memory_info*, uint64_t beg, uint64_t end, uint64_t len);
-void add_blocked_segment(memory_info*, uint64_t beg, uint64_t end);
+void init_usable_segment_struct();
+void update_end_of_memory(uint64_t new_end);
+void add_segment(uint64_t beg, uint64_t end, uint64_t len);
+void add_blocked_segment(uint64_t beg, uint64_t end);
 
-void *MMU_pf_alloc(memory_info*);
-void MMU_pf_free(memory_info*,void *pf);
+void *MMU_pf_alloc();
+void MMU_pf_free(void *pf);
+void zero_out_page(void *pf);
 
+void *init_page_table();
+void *MMU_alloc_page();
 #endif

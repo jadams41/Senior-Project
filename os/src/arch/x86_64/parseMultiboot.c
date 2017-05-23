@@ -114,7 +114,7 @@ void printTagInfo(GenericTagHeader *tag){
     }
 }
 
-void potentiallyUseTag(GenericTagHeader *tag, memory_info* memInfo){
+void potentiallyUseTag(GenericTagHeader *tag){
     if(tag->type == MEMORY_MAP){
         MemoryMap *mapTag = (MemoryMap*) tag;
 
@@ -124,9 +124,10 @@ void potentiallyUseTag(GenericTagHeader *tag, memory_info* memInfo){
         MemoryMapEntry * entry = &(mapTag->map);
         while((uint64_t)entry < endOfTag){
             if(entry->type == 1){
-                add_segment(memInfo, entry->startingAddr, entry->startingAddr + entry->lengthInBytes, entry->lengthInBytes);
+                add_segment(entry->startingAddr, entry->startingAddr + entry->lengthInBytes, entry->lengthInBytes);
                 printk("segment added\n");
             }
+            update_end_of_memory(entry->startingAddr + entry->lengthInBytes);
             entry = (MemoryMapEntry*)(((uint64_t)entry) + mapTag->memoryInfoEntrySize);
         }
     }
@@ -149,6 +150,6 @@ void potentiallyUseTag(GenericTagHeader *tag, memory_info* memInfo){
             elfArrPointer++;
         }
         printk("going to block chunk of memory: (%lx, %lx)\n", earliest_elf_address, last_elf_address);
-        add_blocked_segment(memInfo, earliest_elf_address, last_elf_address);
+        add_blocked_segment(earliest_elf_address, last_elf_address);
     }
 }

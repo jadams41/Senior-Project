@@ -112,6 +112,6 @@ typedef struct {
 uint32_t getTotalTagSize(TagStructureInfo*);
 GenericTagHeader *getNextTag(GenericTagHeader*);
 void printTagInfo(GenericTagHeader*);
-void potentiallyUseTag(GenericTagHeader *tag, memory_info* memInfo);
+void potentiallyUseTag(GenericTagHeader *tag);
 
 #endif

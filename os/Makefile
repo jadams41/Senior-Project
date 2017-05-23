@@ -48,4 +48,4 @@ build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 #compile c files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.c
 	@mkdir -p $(shell dirname $@)
-	@$(CC) -c -g $< -o $@ -Wall -Werror
+	@$(CC) -c -g $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone

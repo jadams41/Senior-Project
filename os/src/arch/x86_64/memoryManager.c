@@ -1,34 +1,50 @@
 #include "memoryManager.h"
 #include <stdint-gcc.h>
 #include "printk.h"
+#include "utils.h"
 
-void init_usable_segment_struct(memory_info *new_struct){
+extern void store_control_registers();
+extern uint64_t saved_cr2;
+extern uint64_t saved_cr3;
+
+memory_info memInfo;
+
+void init_usable_segment_struct(){
     int i;
     for(i = 0; i < 20; i++){
-        usable_memory_segment *seg = &(new_struct->segments[i]);
+        usable_memory_segment *seg = &(memInfo.segments[i]);
         seg->beg_addr = 0;
         seg->end_addr = 0;
         seg->length = 0;
         seg->position_inside_segment = 0;
 
-        blocked_memory_segment *bseg = &(new_struct->blocked_segments[i]);
+        blocked_memory_segment *bseg = &(memInfo.blocked_segments[i]);
         bseg->beg_addr = -1;
         bseg->end_addr = -1;
     }
-    new_struct->seg_length = 0;
-    new_struct->bseg_length = 0;
-    new_struct->curSegment = -1;
+    memInfo.seg_length = 0;
+    memInfo.bseg_length = 0;
+    memInfo.curSegment = -1;
 
-    new_struct->node_frame.beg_addr = 0;
-    new_struct->node_frame.end_addr = 0;
-    new_struct->node_frame.current_position_in_frame = 0;
+    memInfo.node_frame.beg_addr = 0;
+    memInfo.node_frame.end_addr = 0;
+    memInfo.node_frame.current_position_in_frame = 0;
 
-    new_struct->free_frames_list = 0;
-    new_struct->used_frames_list = 0;
+    memInfo.free_frames_list = 0;
+    memInfo.used_frames_list = 0;
+
+    memInfo.end_of_memory = 0;
+}
+
+void update_end_of_memory(uint64_t new_end){
+    if(new_end > memInfo.end_of_memory){
+        memInfo.end_of_memory = new_end;
+    }
 }
 
 //todo, check if segment is smaller than 4K and if so don't add
-void add_segment(memory_info *info, uint64_t beg, uint64_t end, uint64_t len){
+void add_segment(uint64_t beg, uint64_t end, uint64_t len){
+    memory_info *info = &memInfo;
     if(info->seg_length == 19){
         printk("[ERR]: segment array out of space\n");
         return;
@@ -47,9 +63,11 @@ void add_segment(memory_info *info, uint64_t beg, uint64_t end, uint64_t len){
 
     if(info->curSegment == -1) info->curSegment = length;
     info->seg_length += 1;
+
 }
 
-void add_blocked_segment(memory_info *info, uint64_t beg, uint64_t end){
+void add_blocked_segment(uint64_t beg, uint64_t end){
+    memory_info *info = &memInfo;
     if(info->bseg_length == 19){
         printk("[ERR]: blocked segment array out of space\n");
         return;
@@ -63,7 +81,9 @@ void add_blocked_segment(memory_info *info, uint64_t beg, uint64_t end){
 }
 
 //return end address of blocked_segment if the passed in address is in any of the blocked regions, otherwise 0
-static uint64_t address_in_blocked_memory(memory_info *info, uint64_t addr){
+static uint64_t address_in_blocked_memory(uint64_t addr){
+    memory_info *info = &memInfo;
+
     int i;
     for(i = 0; i < info->bseg_length; i++){
         blocked_memory_segment *bseg = info->blocked_segments + i;
@@ -75,7 +95,8 @@ static uint64_t address_in_blocked_memory(memory_info *info, uint64_t addr){
 }
 
 //returns 0 (NULL) if out of memory, otherwise adress of next available frame
-static int grab_next_frame(memory_info *info){
+static int grab_next_frame(){
+    memory_info *info = &memInfo;
     int end_of_blocked_memory;
     if(info->curSegment == -1 || info->curSegment == (int)info->seg_length){
         //out of memory
@@ -84,7 +105,7 @@ static int grab_next_frame(memory_info *info){
     usable_memory_segment *curSeg = info->segments + info->curSegment;
     while(1){
         int possible_next_frame_addr = curSeg->position_inside_segment;
-
+        while(possible_next_frame_addr % 4096) possible_next_frame_addr += 1;
         //check if there is a 4k frame inside of the currentSegment
         if((possible_next_frame_addr + 4096) > curSeg->end_addr){
             //go to the next memory segments
@@ -94,9 +115,9 @@ static int grab_next_frame(memory_info *info){
             }
             curSeg = info->segments + (++(info->curSegment));
         }
-        else if((end_of_blocked_memory = address_in_blocked_memory(info, possible_next_frame_addr)) || address_in_blocked_memory(info, possible_next_frame_addr + 4096)){
-            if(address_in_blocked_memory(info, possible_next_frame_addr + 4096)){
-                end_of_blocked_memory = address_in_blocked_memory(info, possible_next_frame_addr + 4096);
+        else if((end_of_blocked_memory = address_in_blocked_memory(possible_next_frame_addr)) || address_in_blocked_memory(possible_next_frame_addr + 4096)){
+            if(address_in_blocked_memory(possible_next_frame_addr + 4096)){
+                end_of_blocked_memory = address_in_blocked_memory(possible_next_frame_addr + 4096);
             }
             if(end_of_blocked_memory < (curSeg->end_addr + 1)){
                 curSeg->position_inside_segment = end_of_blocked_memory + 1;
@@ -106,7 +127,7 @@ static int grab_next_frame(memory_info *info){
             }
         }
         else {
-            curSeg->position_inside_segment += 4096;
+            curSeg->position_inside_segment = possible_next_frame_addr + 4096;
             return possible_next_frame_addr;
         }
     }
@@ -117,7 +138,8 @@ static int grab_next_frame(memory_info *info){
 //NOTE: this will happen when the first frame is requested
 //NOTE: this adds 20 page frames to the linked list at a time
 //returns 1 if out of memory (or no segments have been initialized yet)
-static int populate_pf_list(memory_info *info){
+static int populate_pf_list(){
+    memory_info *info = &memInfo;
     int numSegmentsAdded = 0;
     uint64_t next_frame_addr;
     frame_list_node *new_node, *lastNode = 0;
@@ -159,7 +181,8 @@ static int populate_pf_list(memory_info *info){
 
 //will attempt to grab a page frame off of the page frame list
 //then will add a
-void *MMU_pf_alloc(memory_info *info){
+void *MMU_pf_alloc(){
+    memory_info *info = &memInfo;
     int err;
     if(info->free_frames_list == 0){
         err = populate_pf_list(info);
@@ -191,7 +214,8 @@ void *MMU_pf_alloc(memory_info *info){
     return (void*)toAlloc->beg_addr;
 }
 
-void MMU_pf_free(memory_info *info, void *pf){
+void MMU_pf_free(void *pf){
+    memory_info *info = &memInfo;
     frame_list_node *curUsedNode = info->used_frames_list;
     while(1){
         if(curUsedNode == 0){
@@ -225,3 +249,152 @@ void MMU_pf_free(memory_info *info, void *pf){
         curUsedNode = curUsedNode->next_frame;
     }
 }
+
+void zero_out_page(void *pf){
+    uint64_t *position_in_page = (uint64_t*)pf;
+    int i;
+    for(i = 0; i < 512; i++){
+        position_in_page[i] = 0;
+    }
+}
+
+/***** BEGIN VIRTUAL MEMORY FUNCTIONS *****/
+static void initialize_kernel_heap(void *pageTable){
+    uint64_t *tableAccess = (uint64_t*)pageTable, *new_page;
+
+    //check that the kernel heap PML4E hasn't already been set
+    if(tableAccess[15] != 0){
+        printk("[ERR]: kernel heap is already initialized\n");
+        return;
+    }
+
+    //create the page to hold the kernel heap PDPT
+    new_page = (uint64_t*) MMU_pf_alloc();
+    zero_out_page(new_page);
+
+    tableAccess[15] = ((uint64_t)new_page) | 0b11;
+}
+
+/**
+  * allocates physical pages to hold the identity map portion of the page table
+  * returns the pointer to the bottom of the p4 table
+  */
+void *init_page_table(){
+    void *p4_table, *p3_table, *p2_table, *p1_table;
+    //grab a frame for the highest level of the page frame table
+    //this will also be the address returned
+    p4_table = MMU_pf_alloc();
+    zero_out_page(p4_table);
+
+    uint64_t *p4_access = (uint64_t*)p4_table, *p3_access, *p2_access, *p1_access;
+    printk("new page table will be at %lx\n", p4_access);
+
+    //create the identity mapped region
+    p3_table = MMU_pf_alloc();
+    zero_out_page(p3_table);
+
+    p4_access[0] = (uint64_t)p3_table | 0b11;
+    printk("first entry of p4 table points to %lx\n", *p4_access);
+
+    uint64_t current_real_address = 0;
+    int p3_idx = 0, p2_idx = 0, p1_idx = 0;
+    int done = 0;
+
+    p3_access = (uint64_t*)p3_table;
+    while(!done){
+        //set the p3 entry to a new p2 table
+        p2_table = MMU_pf_alloc();
+        zero_out_page(p2_table);
+        p3_access[p3_idx] = (uint64_t)p2_table | 0b11;
+        p2_access = (uint64_t*)p2_table;
+
+        for(p2_idx = 0; p2_idx < 512 && !done; p2_idx++){
+            //create a new p1 table
+            p1_table = MMU_pf_alloc();
+            zero_out_page(p1_table);
+            p2_access[p2_idx] = (uint64_t)p1_table | 0b11;
+            p1_access = (uint64_t*)p1_table;
+
+            for(p1_idx = 0; p1_idx < 512 && !done; p1_idx++){
+                p1_access[p1_idx] = (current_real_address++ * 4096) | 0b11;
+                if(current_real_address * 4096 >= memInfo.end_of_memory){
+                    done = 1;
+                }
+            }
+        }
+        if(++p3_idx >= 512){
+            printk("[ERR]: somehow ran out of virtual addresses in first p4 entry when trying to make the identity map\n");
+            break;
+        }
+    }
+    printk("mapped up to 0x%lx\n", current_real_address * 4096);
+
+    initialize_kernel_heap(p4_table);
+
+    return p4_table;
+}
+
+//check the available bits in the entry
+//if any of them are set assume that the memory is set,
+//else assume that it is free
+static int PTE_free(uint64_t pte){
+    return (pte & 0b111000000000) == 0;
+}
+
+void *MMU_alloc_page(){
+    store_control_registers();
+    uint64_t cr3 = saved_cr3;
+    uint64_t *table_accessor = (uint64_t*)cr3, *p3_access, *p2_access, *p1_access;
+    void *cur_entry;
+    if(!entry_present(table_accessor[15])){
+        printk("[ERR]: kernel heap has not been ininitialized\n");
+        return 0;
+    }
+
+    int done = 0;
+    uint64_t p3_idx = 0, p2_idx = 0, p1_idx = 0;
+    p3_access = (uint64_t*)table_accessor[15];
+    p3_access = strip_present_bits(p3_access); //remove the 0b11 from the p4 entry to create a valid address
+    //iterate over the p3 table, allocating pages for the p2 entries if needed
+    for(p3_idx = 0; p3_idx < 512 && !done; p3_idx++){
+        p2_access = (uint64_t*)p3_access[p3_idx];
+        if(!entry_present((uint64_t)p2_access)){
+            cur_entry = MMU_pf_alloc();
+            zero_out_page(cur_entry);
+            p2_access = (uint64_t*) cur_entry;
+            p3_access[p3_idx] = (uint64_t) p2_access | 0b11;
+        }
+        else {
+            p2_access = strip_present_bits(p2_access); //remove the 0b11 from the entry so that it is a valid address
+        }
+        //now that the p2 entry definitely exists, iterate over that and allocated p1 entries if needed
+        for(p2_idx = 0; p2_idx < 512 && !done; p2_idx++){
+            p1_access = (uint64_t*)p2_access[p2_idx];
+            if(!entry_present((uint64_t)p1_access)){
+                cur_entry = MMU_pf_alloc();
+                zero_out_page(cur_entry);
+                p1_access = (uint64_t*) cur_entry;
+                p2_access[p2_idx] = (uint64_t) p1_access | 0b11;
+            }
+            else {
+                p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
+            }
+            for(p1_idx = 0; p1_idx < 512; p1_idx++){
+                if(PTE_free(p1_access[p1_idx])){
+                    p1_access[p1_idx] |= 0b1000000000;
+                    uint64_t retAddr = 15;
+                    retAddr <<= 39; //index of the kernel heap in p4
+                    retAddr |= p3_idx << 30; //index of this page in the p3 table
+                    retAddr |= p2_idx << 21; //index of this page in the p2 table
+                    retAddr |= p1_idx << 21; //index of this page in the p1 table
+                    return (void*)retAddr;
+                }
+            }
+        }
+    }
+    printk("[ERR]: apparently out of virtual memory in the kernel heap, likely impossible\n");
+    return 0;
+}
+void *MMU_alloc_pages(int num);
+void MMU_free_page(void *);
+void MMU_free_pages(void *, int num);

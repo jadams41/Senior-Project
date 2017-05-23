@@ -10,3 +10,35 @@ uint8_t inline inb(uint16_t port) {
     asm volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
     return val;
 }
+
+/***** page table functions *****/
+int entry_present(uint64_t entry){
+    return entry != 0 && (entry & 0b11) != 0;
+}
+
+uint64_t* strip_present_bits(uint64_t* addr_with_bits){
+    uint64_t present_bits = 0b111111111111;
+    uint64_t present_inv = ~present_bits;
+
+    uint64_t addr_num = (uint64_t)addr_with_bits;
+    addr_num &= present_inv;
+
+    return (uint64_t*)addr_num;
+}
+
+/***** string functions *****/
+void strcpy(char *src, char *dest){
+    while(*src){
+        *dest = *src;
+        dest++;
+        src++;
+    }
+}
+
+void strncpy(char *src,  char *dest, int n){
+    while(n-- > 0){
+        *dest = *src;
+        dest++;
+        src++;
+    }
+}
