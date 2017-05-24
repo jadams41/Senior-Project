@@ -58,4 +58,6 @@ void zero_out_page(void *pf);
 
 void *init_page_table();
 void *MMU_alloc_page();
+void MMU_free_page(void *vpage);
+
 #endif

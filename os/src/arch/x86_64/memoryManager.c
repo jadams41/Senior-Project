@@ -396,5 +396,45 @@ void *MMU_alloc_page(){
     return 0;
 }
 void *MMU_alloc_pages(int num);
-void MMU_free_page(void *);
+void MMU_free_page(void *vpage){
+    uint64_t p4_index, p3_index, p2_index, p1_index, grabber = 0b111111111; //grabber grabs the 9 bit index into the given table
+
+    grabber <<= 12;
+    p1_index = (saved_cr2 & grabber) >> 12;
+    grabber <<= 9;
+    p2_index = (saved_cr2 & grabber) >> 21;
+    grabber <<= 9;
+    p3_index = (saved_cr2 & grabber) >> 30;
+    grabber <<= 9;
+    p4_index = (saved_cr2 & grabber) >> 39;
+
+    uint64_t *table_ptr = (uint64_t*)((uint64_t*)saved_cr3)[p4_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    table_ptr = (uint64_t*)table_ptr[p3_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    table_ptr = (uint64_t*)table_ptr[p2_index];
+    if(!entry_present((uint64_t)table_ptr)) goto page_table_error;
+    table_ptr = strip_present_bits(table_ptr);
+
+    //if the page is present, free the physical page
+    if((table_ptr[p1_index] & 0b11) != 0){
+        void *physicalPage = (void*)(strip_present_bits((uint64_t*)table_ptr[p1_index]));
+        MMU_pf_free(physicalPage);
+        table_ptr[p1_index] = 0;
+    }
+    //if set for on demand, then only need to
+    else if((table_ptr[p1_index] & 0b1000000000) != 0){
+        table_ptr[p1_index] = 0;
+    }
+    else {
+        page_table_error:
+        printk("[ERR]: attempted to free non virtually allocated page\n");
+    }
+
+}
+
 void MMU_free_pages(void *, int num);
