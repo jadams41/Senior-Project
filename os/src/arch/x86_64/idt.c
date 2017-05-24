@@ -656,7 +656,7 @@ void page_fault_handler(int irq, int err){
         void *newPage = MMU_pf_alloc();
         uint64_t pg = (uint64_t)newPage;
         zero_out_page(newPage);
-        pg |= 0b1000000011; //set available and write
+        pg |= 0b11; //set available and write
         table_ptr[p1_index] = pg;
     }
 }
