@@ -33,11 +33,11 @@ This is the repository containing the implementation of a x86_64 operating syste
 * Make sure that the error codes for exceptions are grabbed an passed into the irq
     * I think that I am not following his specs to have a void * argument which can hold extra info (could be very useful to hold cr2 and cr3 for page faults)
     * Implemented this for #pf but still need to do for all other excpetions that push error codes
-####Miscellaneous notes####
+#### Miscellaneous notes:
 * Figure out what inline function tag does
 * Make sure that there are no race conditions in the implemented code
 
-####Questions for the professor####
+#### Questions for the professor:
 * Ask if the way that I'm doing virtual address allocation sucks (right now I loop through all of the pages starting at the beginning until I find an empty one)
     * It seems like the alternative would be to just keep a reference to the last allocated entry in the p1 table and send back the next one regardless of if things were freed or not
     * <b>This is in the same vein</b> Should I be checking if the entire p1 table is empty when calling MMU_free_page (this would happen a lot more in the other implementation) and if so, freeing that portion of the page table
