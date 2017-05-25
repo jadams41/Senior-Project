@@ -41,6 +41,6 @@ This is the repository containing the implementation of a x86_64 operating syste
 * Ask if the way that I'm doing virtual address allocation sucks (right now I loop through all of the pages starting at the beginning until I find an empty one)
     * It seems like the alternative would be to just keep a reference to the last allocated entry in the p1 table and send back the next one regardless of if things were freed or not
     * <b>This is in the same vein</b> Should I be checking if the entire p1 table is empty when calling MMU_free_page (this would happen a lot more in the other implementation) and if so, freeing that portion of the page table
-* Figure what to do if kmalloc(<very big>) is called
+* Figure what to do if kmalloc(\<very big\>) is called
     * Right now anything > largest block size (2048) is just ignored
     * However, after reading his documentation, he might be suggesting to just allocate raw virtual pages to satisfy the request
