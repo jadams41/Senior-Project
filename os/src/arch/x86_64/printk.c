@@ -155,6 +155,8 @@ void printk(const char *fmtStr, ...) {
 	va_list args;
 	va_start(args, fmtStr);
 
+	char *str;
+
 	while(1){
 		if(!*fmtStr) break;
 		if(*fmtStr == '%'){
@@ -163,7 +165,11 @@ void printk(const char *fmtStr, ...) {
 					printInteger(va_arg(args, int));
 					break;
 				case 's':
-					VGA_display_str(va_arg(args, char*));
+					str = va_arg(args, char*);
+					VGA_display_str(str);
+					while(*str){
+						SER_write(str++, 1);
+					}
 					break;
 				case '%':
 					printCharToVGAandSER('%');
