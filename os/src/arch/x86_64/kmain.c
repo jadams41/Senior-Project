@@ -79,50 +79,89 @@ int kmain(void *multiboot_point, unsigned int multitest){
   enabled = 0;
   while(!enabled) ;
 
-  void *newPage = MMU_alloc_page();
-  uint64_t *page_current = (uint64_t*)newPage;
+  init_kheap();
 
-  //this should page fault because the page is only virtually allocated
-  page_current[0] = 'c';
-  printk("page current is at %lx\n", page_current);
-  printk("page was set correctly? %c\n", page_current[0]);
+  // void *newPage = MMU_alloc_page();
+  // uint64_t *page_current = (uint64_t*)newPage;
+  //
+  // //this should page fault because the page is only virtually allocated
+  // page_current[0] = 'c';
+  // printk("page current is at %lx\n", page_current);
+  // printk("page was set correctly? %c\n", page_current[0]);
+  //
+  // char *pageStrs[5];
+  //
+  // for(enabled = 0; enabled < 5; enabled++){
+  //     page_current = (uint64_t*)MMU_alloc_page();
+  //     printk("page current is at %lx\n", page_current);
+  //     char *str_in_page = (char*)page_current;
+  //
+  //     pageStrs[enabled] = str_in_page;
+  //
+  //     str_in_page[0] = '0' + enabled;
+  //     str_in_page[1] = 't';
+  //     str_in_page[2] = 'e';
+  //     str_in_page[3] = 's';
+  //     str_in_page[4] = 't';
+  //     str_in_page[5] = '0' + enabled;
+  //     printk("%s\n", str_in_page);
+  // }
+  //
+  // for(enabled = 0; enabled < 5; enabled++){
+  //     printk("%s\n", pageStrs[enabled]);
+  // }
+  //
+  // page_current = (uint64_t*)pageStrs[2];
+  // MMU_free_pages(page_current, 2);
+  //
+  // printk("freed from %lx to %lx\n", page_current, page_current + 512 * 3);
+  //
+  // page_current = MMU_alloc_pages(3);
+  // printk("allocated 3 pages in a row starting at %lx\n", page_current);
+  //
+  // for(enabled = 0; enabled < 5; enabled++){
+  //     page_current = MMU_alloc_page();
+  //     printk("allocated a new page at %lx\n", page_current);
+  // }
+  //
+  // printk("testing done\n");
 
-  char *pageStrs[5];
+  char *myStr = (char*)kmalloc(sizeof(char) * 20);
+  myStr[0] = 'k';
+  myStr[1] = 'm';
+  myStr[2] = 'a';
+  myStr[3] = 'l';
+  myStr[4] = 'l';
+  myStr[5] = 'o';
+  myStr[6] = 'c';
+  myStr[7] = ' ';
+  myStr[8] = 'n';
+  myStr[9] = 'o';
+  myStr[10] = 't';
+  myStr[11] = ' ';
+  myStr[12] = 'b';
+  myStr[13] = 'r';
+  myStr[14] = 'o';
+  myStr[15] = 'k';
+  myStr[16] = 'e';
+  myStr[17] = 'n';
+  myStr[18] = '!';
+  myStr[19] = 0;
 
-  for(enabled = 0; enabled < 5; enabled++){
-      page_current = (uint64_t*)MMU_alloc_page();
-      printk("page current is at %lx\n", page_current);
-      char *str_in_page = (char*)page_current;
+  printk("%s\n", myStr);
+  // kfree(myStr);
+  myStr = (char*)kmalloc(sizeof(char) * 20);
+  myStr[0] = 'k';
+  myStr[1] = 'f';
+  myStr[2] = 'r';
+  myStr[3] = 'e';
+  myStr[4] = 'e';
+  myStr[5] = '!';
+  myStr[6] = '!';
 
-      pageStrs[enabled] = str_in_page;
+  printk("%s\n", myStr);
 
-      str_in_page[0] = '0' + enabled;
-      str_in_page[1] = 't';
-      str_in_page[2] = 'e';
-      str_in_page[3] = 's';
-      str_in_page[4] = 't';
-      str_in_page[5] = '0' + enabled;
-      printk("%s\n", str_in_page);
-  }
 
-  for(enabled = 0; enabled < 5; enabled++){
-      printk("%s\n", pageStrs[enabled]);
-  }
-
-  page_current = (uint64_t*)pageStrs[2];
-  MMU_free_pages(page_current, 2);
-
-  printk("freed from %lx to %lx\n", page_current, page_current + 512 * 3);
-
-  page_current = MMU_alloc_pages(3);
-  printk("allocated 3 pages in a row starting at %lx\n", page_current);
-
-  for(enabled = 0; enabled < 5; enabled++){
-      page_current = MMU_alloc_page();
-      printk("allocated a new page at %lx\n", page_current);
-  }
-
-  printk("testing done\n");
 
   while(1) asm("hlt");
 

@@ -18,8 +18,10 @@ This is the repository containing the implementation of a x86_64 operating syste
         * Fixed the previous error however, on the first time that there is a page fault, p4[15](heap addresses) is set correctly, however that p3 table is not set correctly (not sure if I planned for this)
         * This is ultimately causing the table_pointer to be trashed
         * The main error with #pf triggering #gp was that I was not grabbing error code off of the stack, now that I am doing this, everything with page fault and subsequently on demand paging is working
+10. ~~Heap allocator (kmalloc)~~
+    * Largely (emphasis on largely) untested
+    * however, can't think of too many edge cases
 #### Milestones that still need to be implemented:
-10. Heap allocator
 11. Cooperative Multitasking
 12. Process Management and Keyboard Driver
 
@@ -34,3 +36,11 @@ This is the repository containing the implementation of a x86_64 operating syste
 ####Miscellaneous notes####
 * Figure out what inline function tag does
 * Make sure that there are no race conditions in the implemented code
+
+####Questions for the professor####
+* Ask if the way that I'm doing virtual address allocation sucks (right now I loop through all of the pages starting at the beginning until I find an empty one)
+    * It seems like the alternative would be to just keep a reference to the last allocated entry in the p1 table and send back the next one regardless of if things were freed or not
+    * <b>This is in the same vein</b> Should I be checking if the entire p1 table is empty when calling MMU_free_page (this would happen a lot more in the other implementation) and if so, freeing that portion of the page table
+* Figure what to do if kmalloc(<very big>) is called
+    * Right now anything > largest block size (2048) is just ignored
+    * However, after reading his documentation, he might be suggesting to just allocate raw virtual pages to satisfy the request

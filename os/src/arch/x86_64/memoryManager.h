@@ -59,13 +59,18 @@ void zero_out_page(void *pf);
 void *init_page_table();
 void *MMU_alloc_page();
 void *MMU_alloc_pages(int);
-
 void MMU_free_page(void *vpage);
 void MMU_free_pages(void *first_address, int num);
+
+void init_kheap();
+void *kmalloc(size_t);
+void kfree(void*);
 
 struct FreeList {
     struct FreeList *next;
 };
+
+typedef struct FreeList FreeList;
 
 typedef struct {
     int max_size;

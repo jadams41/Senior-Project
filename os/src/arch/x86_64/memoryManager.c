@@ -508,21 +508,143 @@ void MMU_free_pages(void *first_address, int num){
 }
 
 /***** heap allocation *****/
-KmallocPool pool32;
-KmallocPool pool64;
-KmallocPool pool128;
-KmallocPool pool512;
-KmallocPool pool1024;
-KmallocPool pool2048;
+KmallocPool pool32 =   {32,   0, (FreeList*)0};
+KmallocPool pool64 =   {64,   0, (FreeList*)0};
+KmallocPool pool128 =  {128,  0, (FreeList*)0};
+KmallocPool pool512 =  {512,  0, (FreeList*)0};
+KmallocPool pool1024 = {1024, 0, (FreeList*)0};
+KmallocPool pool2048 = {2048, 0, (FreeList*)0};
 
-// static void init_kheap(){
-//
-// }
+static void pushBlockToPoolStack(KmallocPool *pool, FreeList *block){
+    //LIFO linked list
+    block->next = pool->head;
+    pool->head = block;
 
-void kfree(void *addr){
+    //increment number of available blocks in the pool
+    pool->avail += 1;
+}
+
+/**
+  * NOTE: todo determine whether or not the blocks in the pool need to be in contiguous pages of virtual memory
+  * NOTE: todo figure out if laying the structures on top of the virtual pages makes sense (it forces the pages to become physical)
+  * @return the number of blocks added to the pool
+  */
+static int addBlocksToPool(KmallocPool* pool, int numPagesToChopUp){
+    void *pageForBlocks, *curBlockPos;
+    int i, counter = 0, numBlocksPerPage = 4096 / pool->max_size;
+
+    pageForBlocks = MMU_alloc_pages(numPagesToChopUp);
+
+    for(i = 0; i < numBlocksPerPage * numPagesToChopUp; i++){
+        //grab current position in pageForBlocks
+        curBlockPos = pageForBlocks + (pool->max_size * i);
+
+        //overlay a FreeList struct on top of the current block inside the page
+        FreeList *newBlock = (FreeList*)curBlockPos;
+
+        pushBlockToPoolStack(pool, newBlock);
+        counter += 1;
+    }
+
+    return counter;
+}
+
+static FreeList *popBlockFromPool(KmallocPool *pool){
+    FreeList *toReturn;
+
+    //if we are out of blocks in the pool, add 1 page's worth more
+    if(pool->avail == 0){
+        addBlocksToPool(pool, 1);
+    }
+
+    toReturn = pool->head;
+    pool->head = toReturn->next;
+    pool->avail -= 1;
+
+    return toReturn;
+}
+
+
+//fills all of the pools with 1 page worth of blocks
+void init_kheap(){
+    //fill 32 byte pool (should have 128 blocks)
+    addBlocksToPool(&pool32, 1);
+
+    //fill 64 byte pool (should have 64 blocks)
+    addBlocksToPool(&pool64, 1);
+
+    //fill 128 byte pool (should have 32 blocks)
+    addBlocksToPool(&pool128, 1);
+
+    //fill 512 byte pool (should have 8 blocks)
+    addBlocksToPool(&pool512, 1);
+
+    //fill 1024 byte pool (should have 4 blocks)
+    addBlocksToPool(&pool1024, 1);
+
+    //fill 2048 byte pool (should have 2 blocks)
+    addBlocksToPool(&pool2048, 1);
+
+    printk("p32 has %d blocks, p64 has %d blocks, p128 has %d blocks\n", pool32.avail, pool64.avail, pool128.avail);
+    printk("p512 has %d blocks, p1024 has %d blocks, p2048 has %d blocks\n", pool512.avail, pool1024.avail, pool2048.avail);
 
 }
 
+void kfree(void *addr){
+    KmallocExtra *extra = (KmallocExtra*)(addr - sizeof(KmallocExtra));
+    KmallocPool *p = extra->pool;
+
+    if(p == &pool32 || p == &pool64 || p == &pool128 || p == &pool512 || p == &pool1024 || p == &pool2048){
+        pushBlockToPoolStack(p, (FreeList*)extra);
+        return;
+    }
+
+    printk("[ERR]: attempted to free memory that didn't even seem to be allocated, fuck you\n");
+}
+
+//NOTE todo - determine whether or not the size inside of the extra is the size of the block or the size that was requested to be allocated
+//              I am fairly confident it is the second
+//NOTE todo - determine whether the blocks should be their indicated size (i.e 32) or their actual size (i.e. 48)
+//make sure allocated memory is 16 byte aligned
 void *kmalloc(size_t size){
-    return (void *)0;
+    size_t size_w_extra = size + sizeof(KmallocExtra);
+    FreeList *allocatedBlock;
+    KmallocPool *fittingPool;
+    KmallocExtra *extra;
+
+    if(size == 0){
+        return (void*)0;
+    }
+
+    if(size_w_extra <= 32){
+        fittingPool = &pool32;
+    }
+    else if(size_w_extra <= 64){
+        fittingPool = &pool64;
+    }
+    else if(size_w_extra <= 128){
+        fittingPool = &pool128;
+    }
+    else if(size_w_extra <= 512){
+        fittingPool = &pool512;
+    }
+    else if(size_w_extra <= 1024){
+        fittingPool = &pool1024;
+    }
+    else if(size_w_extra <= 2048){
+        fittingPool = &pool2048;
+    }
+    else {
+        printk("[ERR]: tried to allocate too big of a chunk of memory, max is 2032\n");
+        return (void *)0;
+    }
+
+    //if we made it here, the fitting pool should be set
+    allocatedBlock = popBlockFromPool(fittingPool);
+    extra = (KmallocExtra*) allocatedBlock;
+    extra->pool = fittingPool;
+    extra->size = size;
+
+    //return a pointer to the inside of the block past the extra
+    return ((void*)allocatedBlock) + sizeof(KmallocExtra);
 }
