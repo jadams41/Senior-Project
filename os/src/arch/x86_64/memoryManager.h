@@ -2,7 +2,7 @@
 #define MEM_MANAGER
 
 #include <stdint-gcc.h>
-
+#include <stddef.h>
 typedef struct {
     uint64_t beg_addr;
     uint64_t end_addr;
@@ -58,6 +58,24 @@ void zero_out_page(void *pf);
 
 void *init_page_table();
 void *MMU_alloc_page();
+void *MMU_alloc_pages(int);
+
 void MMU_free_page(void *vpage);
+void MMU_free_pages(void *first_address, int num);
+
+struct FreeList {
+    struct FreeList *next;
+};
+
+typedef struct {
+    int max_size;
+    int avail;
+    struct FreeList *head;
+} KmallocPool;
+
+typedef struct {
+    KmallocPool *pool;
+    size_t size;
+} KmallocExtra;
 
 #endif

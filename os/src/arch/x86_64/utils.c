@@ -13,6 +13,8 @@ uint8_t inline inb(uint16_t port) {
 
 /***** page table functions *****/
 int entry_present(uint64_t entry){
+    //NOTE: this only checks the present bits and not the on demand bits
+    //NOTE: for this reason it should only be used to check p4,p3, and p2 entries NOT p1!
     return entry != 0 && (entry & 0b11) != 0;
 }
 
