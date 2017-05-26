@@ -71,61 +71,19 @@ int kmain(void *multiboot_point, unsigned int multitest){
   store_control_registers();
   printk("cr2=%lx, cr3=%lx\n", saved_cr2, saved_cr3);
 
-
   printk("new page table is at %lx\n", new_page_table);
   // check_page_table((void*)new_page_table);
   // printkTest();
   init_kheap();
 
-  enabled = 0;
-  while(!enabled) ;
+  printk_err("sample error\n");
 
-  // virtual_page_frame_test();
+  printk_warn("sample warning\n");
+  virtual_page_frame_test();
+
   kmalloc_test();
-  // void *newPage = MMU_alloc_page();
-  // uint64_t *page_current = (uint64_t*)newPage;
-  //
-  // //this should page fault because the page is only virtually allocated
-  // page_current[0] = 'c';
-  // printk("page current is at %lx\n", page_current);
-  // printk("page was set correctly? %c\n", page_current[0]);
-  //
-  // char *pageStrs[5];
-  //
-  // for(enabled = 0; enabled < 5; enabled++){
-  //     page_current = (uint64_t*)MMU_alloc_page();
-  //     printk("page current is at %lx\n", page_current);
-  //     char *str_in_page = (char*)page_current;
-  //
-  //     pageStrs[enabled] = str_in_page;
-  //
-  //     str_in_page[0] = '0' + enabled;
-  //     str_in_page[1] = 't';
-  //     str_in_page[2] = 'e';
-  //     str_in_page[3] = 's';
-  //     str_in_page[4] = 't';
-  //     str_in_page[5] = '0' + enabled;
-  //     printk("%s\n", str_in_page);
-  // }
-  //
-  // for(enabled = 0; enabled < 5; enabled++){
-  //     printk("%s\n", pageStrs[enabled]);
-  // }
-  //
-  // page_current = (uint64_t*)pageStrs[2];
-  // MMU_free_pages(page_current, 2);
-  //
-  // printk("freed from %lx to %lx\n", page_current, page_current + 512 * 3);
-  //
-  // page_current = MMU_alloc_pages(3);
-  // printk("allocated 3 pages in a row starting at %lx\n", page_current);
-  //
-  // for(enabled = 0; enabled < 5; enabled++){
-  //     page_current = MMU_alloc_page();
-  //     printk("allocated a new page at %lx\n", page_current);
-  // }
-  //
-  // printk("testing done\n");
+
+  while(!enabled) ;
 
   while(1) asm("hlt");
 

@@ -603,7 +603,7 @@ void keyboard_isr(int irq, int err){
 
 //handler for if an isr faults
 void double_fault_handler(int irq, int err){
-    printk("[ERR]: double fault]\n");
+    printk_err("double fault\n");
     asm("hlt");
 }
 
@@ -614,7 +614,7 @@ void serial_isr(int irq, int err){
 }
 
 void general_protection_fault_handler(int irq, int err){
-    printk("[ERR]: general protection fault\n");
+    printk_err("general protection fault\n");
     asm("hlt");
 }
 
@@ -647,7 +647,7 @@ void page_fault_handler(int irq, int err){
 
     if((table_ptr[p1_index] & 0b111000000000) == 0){
         page_table_error:
-        printk("[ERR]: page fault on non-on-demand page\n");
+        printk_err("page fault on non-on-demand page\n");
         printk("   Fault details: cr2=0x%lx cr3=0x%lx", saved_cr2, saved_cr3);
         asm("hlt");
     }
@@ -655,8 +655,8 @@ void page_fault_handler(int irq, int err){
         void *newPage = MMU_pf_alloc();
         if(newPage == 0){
             //error allocating a physical page
-            printk("[ERR]: couldn't get a physical page for the virtual one, halting because we can't resolve the fault");
-            // asm("hlt");
+            printk_err("couldn't get a physical page for the virtual one, halting because we can't resolve the fault\n");
+            asm("hlt");
         }
         // printk("successfully grabbed a physical page (%lx) on demand!\n", newPage);
         uint64_t pg = (uint64_t)newPage;
@@ -846,7 +846,7 @@ void generic_c_isr(int irq, int err){
 
     if(loadedHandler == 0){
         //interrupt was triggered without a loaded isr in the IDT
-        printk("[ERR]: received interrupt on IRQ %d, however there was no ISR installed\n", irq);
+        printk_err("received interrupt on IRQ %d, however there was no ISR installed\n", irq);
     }
     else {
         //ISR has been set and will be called

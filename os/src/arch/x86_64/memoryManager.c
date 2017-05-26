@@ -46,12 +46,12 @@ void update_end_of_memory(uint64_t new_end){
 void add_segment(uint64_t beg, uint64_t end, uint64_t len){
     memory_info *info = &memInfo;
     if(info->seg_length == 19){
-        printk("[ERR]: segment array out of space\n");
+        printk_err("segment array out of space\n");
         return;
     }
 
     if(beg == 0){
-        printk("[ERR]: received a segment beginning at 0, probably invalid\n");
+        printk_err("received a segment beginning at 0, probably invalid\n");
         return;
     }
 
@@ -69,7 +69,7 @@ void add_segment(uint64_t beg, uint64_t end, uint64_t len){
 void add_blocked_segment(uint64_t beg, uint64_t end){
     memory_info *info = &memInfo;
     if(info->bseg_length == 19){
-        printk("[ERR]: blocked segment array out of space\n");
+        printk_err("blocked segment array out of space\n");
         return;
     }
 
@@ -195,7 +195,7 @@ void *MMU_pf_alloc(){
 
     frame_list_node *toAlloc = info->free_frames_list;
     if(toAlloc == 0){
-        printk("[ERR]: there was an error allocating a frame\n");
+        printk_err("there was an error allocating a frame\n");
         return 0;
     }
     toAlloc->used = 1;
@@ -214,8 +214,8 @@ void *MMU_pf_alloc(){
     info->used_frames_list = toAlloc;
 
     count++;
-    if(count % 1000 == 0)
-        printk("[WARN]: apx alloc'd %d%% of phys pages\n", (count * 100/32000));
+    if(count % 1600 == 0)
+        printk_warn("apx alloc'd %d%% of phys pages\n", (count * 100/32000));
 
     return (void*)toAlloc->beg_addr;
 }
@@ -225,7 +225,7 @@ void MMU_pf_free(void *pf){
     frame_list_node *curUsedNode = info->used_frames_list;
     while(1){
         if(curUsedNode == 0){
-            printk("[ERR]: tried to free a node that wasn't allocated\n");
+            printk_err("tried to free a node that wasn't allocated\n");
             return;
         }
         if(curUsedNode->beg_addr == (uint64_t)pf){
@@ -270,7 +270,7 @@ static void initialize_kernel_heap(void *pageTable){
 
     //check that the kernel heap PML4E hasn't already been set
     if(tableAccess[15] != 0){
-        printk("[ERR]: kernel heap is already initialized\n");
+        printk_err("kernel heap is already initialized\n");
         return;
     }
 
@@ -329,7 +329,7 @@ void *init_page_table(){
             }
         }
         if(++p3_idx >= 512){
-            printk("[ERR]: somehow ran out of virtual addresses in first p4 entry when trying to make the identity map\n");
+            printk_err("somehow ran out of virtual addresses in first p4 entry when trying to make the identity map\n");
             break;
         }
     }
@@ -343,9 +343,9 @@ void *init_page_table(){
 //check the available bits in the entry
 //if any of them are set assume that the memory is set,
 //else assume that it is free
-static int PTE_free(uint64_t pte){
-    return (pte & 0b111000000011) == 0;
-}
+// static int PTE_free(uint64_t pte){
+//     return (pte & 0b111000000011) == 0;
+// }
 
 uint64_t p4_idx = 15, p3_idx = 0, p2_idx = 0, p1_idx = 0;
 void *MMU_alloc_page(){
@@ -354,7 +354,7 @@ void *MMU_alloc_page(){
     uint64_t *table_accessor = (uint64_t*)cr3, *p3_access, *p2_access, *p1_access;
     void *cur_entry;
     if(!entry_present(table_accessor[15])){
-        printk("[ERR]: kernel heap has not been ininitialized\n");
+        printk_err("kernel heap has not been ininitialized\n");
         return 0;
     }
 
@@ -403,20 +403,20 @@ void *MMU_alloc_page(){
     return (void*)retAddr;
 
     VIRTUAL_ALLOC_ERR:
-    printk("[ERR]: apparently out of virtual memory in the kernel heap, likely impossible\n");
+    printk_err("apparently out of virtual memory in the kernel heap, likely impossible\n");
     return 0;
 }
 
 void *MMU_alloc_pages(int num){
     if(num <= 0){
-        printk("[ERR]: invalid number of pages to allocate, nothing will happen\n");
+        printk_err("invalid number of pages to allocate, nothing will happen\n");
         return 0;
     }
     int i;
     void *toRet = MMU_alloc_page();
     for(i = 1; i < num; i++){
         if(toRet == 0){
-            printk("[WARN]: ran out of memory while trying to allocate multiple pages. Only allocated %d pages\n", i - 1);
+            printk_warn("ran out of memory while trying to allocate multiple pages. Only allocated %d pages\n", i - 1);
             break;
         }
     }
@@ -460,7 +460,7 @@ void MMU_free_page(void *vpage){
     }
     else {
         page_table_error:
-        printk("[ERR]: attempted to free non virtually allocated page %lx\n", vpage);
+        printk_err("attempted to free non virtually allocated page %lx\n", vpage);
     }
 
 }
@@ -525,7 +525,7 @@ static FreeList *popBlockFromPool(KmallocPool *pool){
     if(pool->avail == 0){
         int blocksAdded = addBlocksToPool(pool, 1);
         if(!blocksAdded){
-            printk("[ERR]: out of memory, can't add more blocks to pool\n");
+            printk_err("out of memory, can't add more blocks to pool\n");
             return (FreeList*)0;
         }
     }
@@ -572,7 +572,7 @@ void kfree(void *addr){
         return;
     }
 
-    printk("[ERR]: attempted to free memory that didn't even seem to be allocated, fuck you\n");
+    printk_err("attempted to free memory that didn't even seem to be allocated, fuck you\n");
 }
 
 //NOTE todo - determine whether or not the size inside of the extra is the size of the block or the size that was requested to be allocated
@@ -608,7 +608,7 @@ void *kmalloc(size_t size){
         fittingPool = &pool2048;
     }
     else {
-        printk("[ERR]: tried to allocate too big of a chunk of memory, max is 2032\n");
+        printk_err("tried to allocate too big of a chunk of memory, max is 2032\n");
         return (void *)0;
     }
 

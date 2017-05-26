@@ -3,6 +3,23 @@
 #include "serial.h"
 #include <stdint-gcc.h>
 
+void setColor(char newColor){
+	cur_char_color &= 0xF0FF;
+	cur_char_color |= (newColor << 8);
+}
+
+void setBackgroundColor(char newColor){
+	cur_char_color &= 0x0FFF;
+	cur_char_color |= (newColor << 12);
+}
+
+char getColor(){
+	return (cur_char_color & 0xF00) >> 8;
+}
+char getBackgroundColor(){
+	return (cur_char_color & 0xF000) >> 12;
+}
+
 void printCharToVGAandSER(char c){
 	VGA_display_char(c);
 	SER_write(&c,1);
@@ -135,26 +152,8 @@ void printHexQuad(unsigned long long l){
 	}
 	printCharToVGAandSER(charToPrint);
 }
-/**
- * currently includes support for the following tokens
- * %d integer
- * %s string
- * %% '%'
- * %u unsigned integer
- * %x hex
- * %c character
- * %p pointer
- * %h[dux] short [d] integer, [u] unsigned, or [h] hex
- * %l[dux] long [d] integer, [u] unsigned, or [h] hex
- * %q[dux] quad [d] integer, [u] unsigned, or [h] hex
- *
- * Note: for every character written, that character will
- * also be printed to the Serial Port #1
- */
-void printk(const char *fmtStr, ...) {
-	va_list args;
-	va_start(args, fmtStr);
 
+static void printk_var(const char *fmtStr, va_list args){
 	char *str;
 
 	while(1){
@@ -242,9 +241,49 @@ void printk(const char *fmtStr, ...) {
 		}
 	}
 }
+/**
+ * currently includes support for the following tokens
+ * %d integer
+ * %s string
+ * %% '%'
+ * %u unsigned integer
+ * %x hex
+ * %c character
+ * %p pointer
+ * %h[dux] short [d] integer, [u] unsigned, or [h] hex
+ * %l[dux] long [d] integer, [u] unsigned, or [h] hex
+ * %q[dux] quad [d] integer, [u] unsigned, or [h] hex
+ *
+ * Note: for every character written, that character will
+ * also be printed to the Serial Port #1
+ */
+void printk(const char *fmtStr, ...) {
+	va_list args;
+	va_start(args, fmtStr);
+	printk_var(fmtStr, args);
+}
 
+void printk_err(const char *fmtStr, ...){
+	va_list args;
+	va_start(args, fmtStr);
+	char color = getColor(), back = getBackgroundColor();
+	setColor(BRIGHT_RED);
+	printk("[ERR]: ");
+	printk_var(fmtStr, args);
+	setColor(color);
+	setBackgroundColor(back);
+}
 
-
+void printk_warn(const char *fmtStr, ...){
+	va_list args;
+	va_start(args, fmtStr);
+	char color = getColor(), back = getBackgroundColor();
+	setColor(CYAN);
+	printk("[WARN]: ");
+	printk_var(fmtStr, args);
+	setColor(color);
+	setBackgroundColor(back);
+}
 void vgaDispCharTest(){
   printCharToVGAandSER('t');
   printCharToVGAandSER('e');
@@ -277,5 +316,29 @@ void printkTest(){
   printk("printk unsigned quad test: %qu\n", -1);
   printk("printk hex quad test: %qx\n", -1);
   printLineAcrossScreen();
+
+  printk("printk color test: ");
+
+  char *colorWords[16] = {
+	"BLACK", "BLUE", "GREEN", "CYAN",
+	"RED", "MAGENTA", "BROWN", "GRAY",
+  	"DARK_GRAY", "BRIGHT_BLUE", "BRIGHT_GREEN", "BRIGHT_CYAN",
+  	"BRIGHT_RED", "BRIGHT_MAGENTA", "YELLOW", "WHITE"
+  };
+  int colorIdx;
+  for(colorIdx = 0; colorIdx < 16; colorIdx++){
+	  setColor(colorIdx);
+	  printk(colorWords[colorIdx]);
+	  setColor(GRAY);
+	  printk("-");
+  }
+  printk("\nbackground color test: ");
+  for(colorIdx = 0; colorIdx < 16; colorIdx++){
+	setBackgroundColor(colorIdx);
+	printk(colorWords[colorIdx]);
+	setBackgroundColor(BLACK);
+	printk("-");
+  }
+  printk("\n");
 
 }
