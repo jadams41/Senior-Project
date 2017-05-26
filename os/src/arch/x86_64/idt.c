@@ -652,10 +652,15 @@ void page_fault_handler(int irq, int err){
         asm("hlt");
     }
     else {
-        printk("on demand paging working!\n");
         void *newPage = MMU_pf_alloc();
+        if(newPage == 0){
+            //error allocating a physical page
+            printk("[ERR]: couldn't get a physical page for the virtual one, halting because we can't resolve the fault");
+            // asm("hlt");
+        }
+        // printk("successfully grabbed a physical page (%lx) on demand!\n", newPage);
         uint64_t pg = (uint64_t)newPage;
-        zero_out_page(newPage);
+        // zero_out_page(newPage);
         pg |= 0b11; //set available and write
         table_ptr[p1_index] = pg;
     }

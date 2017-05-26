@@ -44,3 +44,8 @@ This is the repository containing the implementation of a x86_64 operating syste
 * Figure what to do if kmalloc(\<very big\>) is called
     * Right now anything > largest block size (2048) is just ignored
     * However, after reading his documentation, he might be suggesting to just allocate raw virtual pages to satisfy the request
+
+#### Known issues
+* When the program runs out physical memory and a page fault is triggered on a page that is attempted to be brought in on demand, the program will halt in the page fault handler
+    * This is exploited in the kmalloc test when we attempt to exhaust the memory, considering kmalloc grabs a virtual address
+    * Looked into what happens in linux and when kmalloc runs out of memory, just get a message that says killed and the program quits

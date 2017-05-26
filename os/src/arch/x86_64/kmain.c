@@ -74,13 +74,14 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   printk("new page table is at %lx\n", new_page_table);
   // check_page_table((void*)new_page_table);
-  printkTest();
+  // printkTest();
+  init_kheap();
 
   enabled = 0;
   while(!enabled) ;
 
-  init_kheap();
-
+  // virtual_page_frame_test();
+  kmalloc_test();
   // void *newPage = MMU_alloc_page();
   // uint64_t *page_current = (uint64_t*)newPage;
   //
@@ -125,43 +126,6 @@ int kmain(void *multiboot_point, unsigned int multitest){
   // }
   //
   // printk("testing done\n");
-
-  char *myStr = (char*)kmalloc(sizeof(char) * 20);
-  myStr[0] = 'k';
-  myStr[1] = 'm';
-  myStr[2] = 'a';
-  myStr[3] = 'l';
-  myStr[4] = 'l';
-  myStr[5] = 'o';
-  myStr[6] = 'c';
-  myStr[7] = ' ';
-  myStr[8] = 'n';
-  myStr[9] = 'o';
-  myStr[10] = 't';
-  myStr[11] = ' ';
-  myStr[12] = 'b';
-  myStr[13] = 'r';
-  myStr[14] = 'o';
-  myStr[15] = 'k';
-  myStr[16] = 'e';
-  myStr[17] = 'n';
-  myStr[18] = '!';
-  myStr[19] = 0;
-
-  printk("%s\n", myStr);
-  // kfree(myStr);
-  myStr = (char*)kmalloc(sizeof(char) * 20);
-  myStr[0] = 'k';
-  myStr[1] = 'f';
-  myStr[2] = 'r';
-  myStr[3] = 'e';
-  myStr[4] = 'e';
-  myStr[5] = '!';
-  myStr[6] = '!';
-
-  printk("%s\n", myStr);
-
-
 
   while(1) asm("hlt");
 

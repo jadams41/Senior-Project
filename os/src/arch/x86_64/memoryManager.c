@@ -179,6 +179,7 @@ static int populate_pf_list(){
     return 0;
 }
 
+int count = 0;
 //will attempt to grab a page frame off of the page frame list
 //then will add a
 void *MMU_pf_alloc(){
@@ -188,6 +189,7 @@ void *MMU_pf_alloc(){
         err = populate_pf_list(info);
         if(err){
             printk("There was an error populating the page frame list\n");
+            return 0;
         }
     }
 
@@ -210,6 +212,10 @@ void *MMU_pf_alloc(){
     if(info->used_frames_list != 0)
         info->used_frames_list->prev_frame = toAlloc;
     info->used_frames_list = toAlloc;
+
+    count++;
+    if(count % 1000 == 0)
+        printk("[WARN]: apx alloc'd %d%% of phys pages\n", (count * 100/32000));
 
     return (void*)toAlloc->beg_addr;
 }
@@ -341,6 +347,7 @@ static int PTE_free(uint64_t pte){
     return (pte & 0b111000000011) == 0;
 }
 
+uint64_t p4_idx = 15, p3_idx = 0, p2_idx = 0, p1_idx = 0;
 void *MMU_alloc_page(){
     store_control_registers();
     uint64_t cr3 = saved_cr3;
@@ -351,113 +358,71 @@ void *MMU_alloc_page(){
         return 0;
     }
 
-    int done = 0;
-    uint64_t p3_idx = 0, p2_idx = 0, p1_idx = 0;
-    p3_access = (uint64_t*)table_accessor[15];
+    p3_access = (uint64_t*)table_accessor[p4_idx];
     p3_access = strip_present_bits(p3_access); //remove the 0b11 from the p4 entry to create a valid address
     //iterate over the p3 table, allocating pages for the p2 entries if needed
-    for(p3_idx = 0; p3_idx < 512 && !done; p3_idx++){
-        p2_access = (uint64_t*)p3_access[p3_idx];
-        if(!entry_present((uint64_t)p2_access)){
-            cur_entry = MMU_pf_alloc();
-            zero_out_page(cur_entry);
-            p2_access = (uint64_t*) cur_entry;
-            p3_access[p3_idx] = (uint64_t) p2_access | 0b11;
-        }
-        else {
-            p2_access = strip_present_bits(p2_access); //remove the 0b11 from the entry so that it is a valid address
-        }
-        //now that the p2 entry definitely exists, iterate over that and allocated p1 entries if needed
-        for(p2_idx = 0; p2_idx < 512 && !done; p2_idx++){
-            p1_access = (uint64_t*)p2_access[p2_idx];
-            if(!entry_present((uint64_t)p1_access)){
-                cur_entry = MMU_pf_alloc();
-                zero_out_page(cur_entry);
-                p1_access = (uint64_t*) cur_entry;
-                p2_access[p2_idx] = (uint64_t) p1_access | 0b11;
-            }
-            else {
-                p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
-            }
-            for(p1_idx = 0; p1_idx < 512; p1_idx++){
-                if(PTE_free(p1_access[p1_idx])){
-                    p1_access[p1_idx] |= 0b1000000000;
-                    uint64_t retAddr = 15;
-                    retAddr <<= 39; //index of the kernel heap in p4
-                    retAddr |= p3_idx << 30; //index of this page in the p3 table
-                    retAddr |= p2_idx << 21; //index of this page in the p2 table
-                    retAddr |= p1_idx << 12; //index of this page in the p1 table
-                    return (void*)retAddr;
-                }
-            }
-        }
+    p2_access = (uint64_t*)p3_access[p3_idx];
+    if(!entry_present((uint64_t)p2_access)){
+        cur_entry = MMU_pf_alloc();
+        if(!cur_entry) goto VIRTUAL_ALLOC_ERR;
+
+        zero_out_page(cur_entry);
+        p2_access = (uint64_t*) cur_entry;
+        p3_access[p3_idx] = (uint64_t) p2_access | 0b11;
     }
-    printk("[ERR]: apparently out of virtual memory in the kernel heap, likely impossible\n");
-    return 0;
-}
-void *MMU_alloc_pages(int num){
-    store_control_registers();
-    uint64_t cr3 = saved_cr3;
-    uint64_t *table_accessor = (uint64_t*)cr3, *p3_access, *p2_access, *p1_access;
-    void *cur_entry;
-    if(!entry_present(table_accessor[15])){
-        printk("[ERR]: kernel heap has not been ininitialized\n");
-        return 0;
+    else {
+        p2_access = strip_present_bits(p2_access); //remove the 0b11 from the entry so that it is a valid address
+    }
+    p1_access = (uint64_t*)p2_access[p2_idx];
+    if(!entry_present((uint64_t)p1_access)){
+        cur_entry = MMU_pf_alloc();
+        if(!cur_entry) goto VIRTUAL_ALLOC_ERR;
+
+        zero_out_page(cur_entry);
+        p1_access = (uint64_t*) cur_entry;
+        p2_access[p2_idx] = (uint64_t) p1_access | 0b11;
+    }
+    else {
+        p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
+    }
+    p1_access[p1_idx] |= 0b1000000000;
+    uint64_t retAddr = 15;
+    retAddr <<= 39; //index of the kernel heap in p4
+    retAddr |= p3_idx << 30; //index of this page in the p3 table
+    retAddr |= p2_idx << 21; //index of this page in the p2 table
+    retAddr |= p1_idx << 12; //index of this page in the p1 table
+    if(++p1_idx == 512){
+        p1_idx = 0;
+        if(++p2_idx == 512){
+            p2_idx = 0;
+            if(++p3_idx == 512) goto VIRTUAL_ALLOC_ERR;
+            // print("p3 incremented to %d\n", p3_idx);
+        }
     }
 
-    int done = 0;
-    uint64_t p3_idx = 0, p2_idx = 0, p1_idx = 0;
-    p3_access = (uint64_t*)table_accessor[15];
-    p3_access = strip_present_bits(p3_access); //remove the 0b11 from the p4 entry to create a valid address
-    //iterate over the p3 table, allocating pages for the p2 entries if needed
-    for(p3_idx = 0; p3_idx < 512 && !done; p3_idx++){
-        p2_access = (uint64_t*)p3_access[p3_idx];
-        if(!entry_present((uint64_t)p2_access)){
-            cur_entry = MMU_pf_alloc();
-            zero_out_page(cur_entry);
-            p2_access = (uint64_t*) cur_entry;
-            p3_access[p3_idx] = (uint64_t) p2_access | 0b11;
-        }
-        else {
-            p2_access = strip_present_bits(p2_access); //remove the 0b11 from the entry so that it is a valid address
-        }
-        //now that the p2 entry definitely exists, iterate over that and allocated p1 entries if needed
-        for(p2_idx = 0; p2_idx < 512 && !done; p2_idx++){
-            p1_access = (uint64_t*)p2_access[p2_idx];
-            if(!entry_present((uint64_t)p1_access)){
-                cur_entry = MMU_pf_alloc();
-                zero_out_page(cur_entry);
-                p1_access = (uint64_t*) cur_entry;
-                p2_access[p2_idx] = (uint64_t) p1_access | 0b11;
-            }
-            else {
-                p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
-            }
-            for(p1_idx = 0; p1_idx < 512; p1_idx++){
-                int openBlocks, count = 0;
-                for(openBlocks = 0; openBlocks < num && openBlocks + p1_idx < 512; openBlocks++){
-                    if(PTE_free(p1_access[p1_idx + openBlocks])){
-                        count++;
-                    }
-                }
-                //there are the amount of open blocks that we need all in a row
-                if(count == num){
-                    for(openBlocks = 0; openBlocks < num; openBlocks++){
-                        p1_access[p1_idx + openBlocks] |= 0b1000000000;
-                    }
-                    uint64_t retAddr = 15;
-                    retAddr <<= 39; //index of the kernel heap in p4
-                    retAddr |= p3_idx << 30; //index of this page in the p3 table
-                    retAddr |= p2_idx << 21; //index of this page in the p2 table
-                    retAddr |= p1_idx << 12; //index of this page in the p1 table
-                    return (void*)retAddr;
-                }
-            }
-        }
-    }
+    return (void*)retAddr;
+
+    VIRTUAL_ALLOC_ERR:
     printk("[ERR]: apparently out of virtual memory in the kernel heap, likely impossible\n");
     return 0;
 }
+
+void *MMU_alloc_pages(int num){
+    if(num <= 0){
+        printk("[ERR]: invalid number of pages to allocate, nothing will happen\n");
+        return 0;
+    }
+    int i;
+    void *toRet = MMU_alloc_page();
+    for(i = 1; i < num; i++){
+        if(toRet == 0){
+            printk("[WARN]: ran out of memory while trying to allocate multiple pages. Only allocated %d pages\n", i - 1);
+            break;
+        }
+    }
+    return toRet;
+}
+
 void MMU_free_page(void *vpage){
     uint64_t p4_index, p3_index, p2_index, p1_index, grabber = 0b111111111; //grabber grabs the 9 bit index into the given table
     uint64_t vpage_addr = (uint64_t)vpage;
@@ -533,7 +498,11 @@ static int addBlocksToPool(KmallocPool* pool, int numPagesToChopUp){
     void *pageForBlocks, *curBlockPos;
     int i, counter = 0, numBlocksPerPage = 4096 / pool->max_size;
 
-    pageForBlocks = MMU_alloc_pages(numPagesToChopUp);
+    pageForBlocks = MMU_alloc_page();
+    if(pageForBlocks == 0){
+        return 0;
+    }
+    // pageForBlocks = MMU_alloc_pages(numPagesToChopUp);
 
     for(i = 0; i < numBlocksPerPage * numPagesToChopUp; i++){
         //grab current position in pageForBlocks
@@ -554,7 +523,11 @@ static FreeList *popBlockFromPool(KmallocPool *pool){
 
     //if we are out of blocks in the pool, add 1 page's worth more
     if(pool->avail == 0){
-        addBlocksToPool(pool, 1);
+        int blocksAdded = addBlocksToPool(pool, 1);
+        if(!blocksAdded){
+            printk("[ERR]: out of memory, can't add more blocks to pool\n");
+            return (FreeList*)0;
+        }
     }
 
     toReturn = pool->head;
@@ -641,6 +614,9 @@ void *kmalloc(size_t size){
 
     //if we made it here, the fitting pool should be set
     allocatedBlock = popBlockFromPool(fittingPool);
+    if(!allocatedBlock){
+        return 0;
+    }
     extra = (KmallocExtra*) allocatedBlock;
     extra->pool = fittingPool;
     extra->size = size;
