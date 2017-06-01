@@ -31,7 +31,14 @@
 #define SIMD_FLOATING_POINT_EX 19
 #define VIRTUALIZATION_EX 20
 #define SECURITY_EX 30
+#define SYSCALL_VECTOR 0x80
 
+/**
+  * SYSCALL numbers (defined by me)
+  */
+#define SYS_YIELD 24
+#define SYS_EXIT 60
+#define SYS_START 1
 /*
  * Interrupt stack numbers
  * NOTE: unless #DF, #GP, or #PF will run on the default GENERAL_INTERRUPT_STACK
@@ -40,7 +47,7 @@
 #define DOUBLE_FAULT_STACK 1
 #define GENERAL_PROTECTION_STACK 2
 #define PAGE_FAULT_STACK 3
-
+#define SYSCALL_STACK 4
 typedef struct {
     uint32_t res1;
     uint64_t PST1;
@@ -122,6 +129,5 @@ void idt_init(void);
 void IRQ_set_handler(int irq, void *handler);
 void IRQ_set_mask(int IRQLine);
 void IRQ_clear_mask(int IRQLine);
-
 
 #endif

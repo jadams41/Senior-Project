@@ -7,16 +7,31 @@
 #include "memoryManager.h"
 #include "test.h"
 #include "utils.h"
+#include "process.h"
+#include "snakes.h"
 
-extern void interrupt_test_wrapper();
+extern void perform_syscall(int);
 extern void load_page_table(uint64_t);
 extern void store_control_registers();
 extern uint64_t saved_cr2;
 extern uint64_t saved_cr3;
 
+void test(void *param){
+    printk("test\n");
+    yield();
+    printk("test again\n");
+    kexit();
+}
+
+void otherTest(void *param){
+    printk("boooom\n");
+    yield();
+    printk("boooom again\n");
+    kexit();
+}
+
 int kmain(void *multiboot_point, unsigned int multitest){
   asm("cli");
-  int enabled = 0;
 
   //set up and test the VGA
   VGA_clear();
@@ -79,11 +94,20 @@ int kmain(void *multiboot_point, unsigned int multitest){
   printk_err("sample error\n");
 
   printk_warn("sample warning\n");
-  virtual_page_frame_test();
+  // virtual_page_frame_test();
 
-  kmalloc_test();
+  // PROC_create_kthread(test, 0);
+  // PROC_create_kthread(otherTest, 0);
 
+  setup_snakes(0);
+
+  int enabled = 0;
   while(!enabled) ;
+
+  PROC_run();
+
+  printk("back from the fucking dead fucker!\n");
+
 
   while(1) asm("hlt");
 

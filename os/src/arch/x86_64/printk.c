@@ -3,9 +3,14 @@
 #include "serial.h"
 #include <stdint-gcc.h>
 
+extern uint64_t vga_buf_cur;
+extern uint64_t vga_scroll_disabled;
+
 void setColor(char newColor){
 	cur_char_color &= 0xF0FF;
 	cur_char_color |= (newColor << 8);
+
+	// SER_change_color(newColor);
 }
 
 void setBackgroundColor(char newColor){
@@ -267,7 +272,7 @@ void printk_err(const char *fmtStr, ...){
 	va_list args;
 	va_start(args, fmtStr);
 	char color = getColor(), back = getBackgroundColor();
-	setColor(BRIGHT_RED);
+	setColor(VGA_BRIGHT_RED);
 	printk("[ERR]: ");
 	printk_var(fmtStr, args);
 	setColor(color);
@@ -278,12 +283,68 @@ void printk_warn(const char *fmtStr, ...){
 	va_list args;
 	va_start(args, fmtStr);
 	char color = getColor(), back = getBackgroundColor();
-	setColor(CYAN);
+	setColor(VGA_CYAN);
 	printk("[WARN]: ");
 	printk_var(fmtStr, args);
 	setColor(color);
 	setBackgroundColor(back);
 }
+
+void printk_info(const char *fmtStr, ...){
+	va_list args;
+	va_start(args, fmtStr);
+	char color = getColor(), back = getBackgroundColor();
+	setColor(VGA_BRIGHT_GREEN);
+	printk("[INFO]: ");
+	printk_var(fmtStr, args);
+	setColor(color);
+	setBackgroundColor(back);
+}
+
+int VGA_col_count(){
+	return 80;
+}
+
+int VGA_row_count(){
+	return 25;
+}
+
+// void VGA_clear(){
+// 	int i = 80;
+// 	while(i--)
+// 		VGA_display_char(0x08);
+// }
+
+void VGA_display_attr_char(int x, int y, char c, char fg, char bg){
+	vga_scroll_disabled = 1;
+
+	//store current fg and bg
+	char color = getColor();
+	char bcolor = getBackgroundColor();
+
+	//set fg and bg
+	setColor(fg);
+	setBackgroundColor(bg);
+
+	//store current position
+	uint64_t current_pos = vga_buf_cur;
+
+	//change the position
+	vga_buf_cur = (y * VGA_col_count() + x) * 2 + 0xb8000;
+
+	//display the character
+	VGA_display_char(c);
+
+	// //restore the position
+	vga_buf_cur = current_pos;
+
+	//restore fg and bg
+	setColor(color);
+	setColor(bcolor);
+
+	vga_scroll_disabled = 1;
+}
+
 void vgaDispCharTest(){
   printCharToVGAandSER('t');
   printCharToVGAandSER('e');
@@ -329,14 +390,14 @@ void printkTest(){
   for(colorIdx = 0; colorIdx < 16; colorIdx++){
 	  setColor(colorIdx);
 	  printk(colorWords[colorIdx]);
-	  setColor(GRAY);
+	  setColor(VGA_GRAY);
 	  printk("-");
   }
   printk("\nbackground color test: ");
   for(colorIdx = 0; colorIdx < 16; colorIdx++){
 	setBackgroundColor(colorIdx);
 	printk(colorWords[colorIdx]);
-	setBackgroundColor(BLACK);
+	setBackgroundColor(VGA_BLACK);
 	printk("-");
   }
   printk("\n");

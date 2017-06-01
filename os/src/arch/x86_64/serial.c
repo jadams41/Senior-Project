@@ -142,3 +142,106 @@ int SER_write(const char *buff, int len){
 
 	return charsWritten;
 }
+
+/**
+  * takes the vga char color code and writes the equivalent unix terminal colors to the serial
+  */
+void SER_change_color(char vga_color){
+	char terminalStr[20];
+	terminalStr[0] = '\\';
+	terminalStr[1] = '0';
+	terminalStr[2] = '3';
+	terminalStr[3] = '3';
+	terminalStr[4] = '[';
+	terminalStr[5] = '0';
+	// terminalStr[6] = '';
+	terminalStr[7] = ';';
+	terminalStr[8] = '3';
+	//terminalStr[9] = '';
+	terminalStr[10] = 'm';
+	terminalStr[11] = 0;
+
+	switch(vga_color){
+		case VGA_BLACK:
+			terminalStr[6] = '0';
+			terminalStr[9] = '0';
+			break;
+
+		case VGA_BLUE:
+			terminalStr[6] = '0';
+			terminalStr[9] = '1';
+			break;
+
+		case VGA_GREEN:
+			terminalStr[6] = '0';
+			terminalStr[9] = '2';
+			break;
+
+		case VGA_CYAN:
+			terminalStr[6] = '0';
+			terminalStr[9] = '3';
+			break;
+
+		case VGA_RED:
+			terminalStr[6] = '0';
+			terminalStr[9] = '4';
+			break;
+
+		case VGA_MAGENTA:
+			terminalStr[6] = '0';
+			terminalStr[9] = '5';
+			break;
+
+		case VGA_BROWN:
+			terminalStr[6] = '0';
+			terminalStr[9] = '6';
+			break;
+
+		case VGA_GRAY:
+			terminalStr[6] = '0';
+			terminalStr[9] = '7';
+			break;
+
+		case VGA_DARK_GRAY:
+			terminalStr[6] = '1';
+			terminalStr[9] = '0';
+			break;
+
+		case VGA_BRIGHT_BLUE:
+			terminalStr[6] = '1';
+			terminalStr[9] = '1';
+			break;
+
+		case VGA_BRIGHT_GREEN:
+			terminalStr[6] = '1';
+			terminalStr[9] = '2';
+			break;
+
+		case VGA_BRIGHT_CYAN:
+			terminalStr[6] = '1';
+			terminalStr[9] = '3';
+			break;
+
+		case VGA_BRIGHT_RED:
+			terminalStr[6] = '1';
+			terminalStr[9] = '4';
+			break;
+
+		case VGA_BRIGHT_MAGENTA:
+			terminalStr[6] = '1';
+			terminalStr[9] = '5';
+			break;
+
+		case VGA_YELLOW:
+			terminalStr[6] = '1';
+			terminalStr[9] = '6';
+			break;
+
+		case VGA_WHITE:
+			terminalStr[6] = '1';
+			terminalStr[9] = '7';
+			break;
+	}
+
+	SER_write(terminalStr, 11);
+}

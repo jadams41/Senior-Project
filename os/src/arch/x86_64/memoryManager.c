@@ -281,6 +281,23 @@ static void initialize_kernel_heap(void *pageTable){
     tableAccess[15] = ((uint64_t)new_page) | 0b11;
 }
 
+static void initialize_user_space(void *pageTable){
+    uint64_t *tableAccess = (uint64_t*)pageTable, *new_page;
+
+    //check that the kernel heap PML4E hasn't already been set
+    if(tableAccess[16] != 0){
+        printk_err("kernel heap is already initialized\n");
+        return;
+    }
+
+    //create the page to hold the kernel heap PDPT
+    new_page = (uint64_t*) MMU_pf_alloc();
+    zero_out_page(new_page);
+
+    tableAccess[16] = ((uint64_t)new_page) | 0b11;
+
+}
+
 /**
   * allocates physical pages to hold the identity map portion of the page table
   * returns the pointer to the bottom of the p4 table
@@ -336,6 +353,7 @@ void *init_page_table(){
     printk("mapped up to 0x%lx\n", current_real_address * 4096);
 
     initialize_kernel_heap(p4_table);
+    initialize_user_space(p4_table);
 
     return p4_table;
 }
@@ -353,7 +371,7 @@ void *MMU_alloc_page(){
     uint64_t cr3 = saved_cr3;
     uint64_t *table_accessor = (uint64_t*)cr3, *p3_access, *p2_access, *p1_access;
     void *cur_entry;
-    if(!entry_present(table_accessor[15])){
+    if(!entry_present(table_accessor[p4_idx])){
         printk_err("kernel heap has not been ininitialized\n");
         return 0;
     }
@@ -386,7 +404,7 @@ void *MMU_alloc_page(){
         p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
     }
     p1_access[p1_idx] |= 0b1000000000;
-    uint64_t retAddr = 15;
+    uint64_t retAddr = p4_idx;
     retAddr <<= 39; //index of the kernel heap in p4
     retAddr |= p3_idx << 30; //index of this page in the p3 table
     retAddr |= p2_idx << 21; //index of this page in the p2 table
@@ -413,13 +431,32 @@ void *MMU_alloc_pages(int num){
         return 0;
     }
     int i;
-    void *toRet = MMU_alloc_page();
+    void *toRet;
+    void *pg = toRet = MMU_alloc_page();
+
     for(i = 1; i < num; i++){
-        if(toRet == 0){
+        if(pg == 0){
             printk_warn("ran out of memory while trying to allocate multiple pages. Only allocated %d pages\n", i - 1);
             break;
         }
+        pg = MMU_alloc_page();
     }
+    return toRet;
+}
+
+void *MMU_alloc_user_page(){
+    uint64_t saved_p4 = p4_idx;
+    p4_idx = 16;
+    void *toRet = MMU_alloc_page();
+    p4_idx = saved_p4;
+    return toRet;
+}
+
+void *MMU_alloc_user_pages(int num){
+    uint64_t saved_p4 = p4_idx;
+    p4_idx = 16;
+    void *toRet = MMU_alloc_pages(num);
+    p4_idx = saved_p4;
     return toRet;
 }
 

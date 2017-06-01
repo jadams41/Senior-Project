@@ -36,5 +36,6 @@ void SER_init();
 int SER_write(const char *buff, int len);
 void disableSerialPrinting();
 void enableSerialPrinting();
+void SER_change_color(char);
 
 #endif

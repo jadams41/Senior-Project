@@ -3,15 +3,19 @@ global halt_wrapper
 global VGA_clear
 global VGA_display_char
 global VGA_display_str
+global vga_buf_cur
+global vga_scroll_disabled
 global load_idt
 global keyboard_handler
-global interrupt_test_wrapper
+global perform_syscall
 global store_control_registers
 global new_GDT
 global cur_char_color
 global load_page_table
 global saved_cr2
 global saved_cr3
+global saved_rsp
+global saved_rbp
 
 global irq0_handler
 global irq1_handler
@@ -276,6 +280,9 @@ extern keyboard_handler_main
 extern generic_c_isr
 extern multiboot_pointer
 extern multiboot_test
+extern curProc
+extern nextProc
+
 
 section .text
 bits 64
@@ -305,8 +312,11 @@ load_page_table:
 	mov cr3, rdi
 	ret
 
-interrupt_test_wrapper:
-    int 14
+perform_syscall:
+    push rdx
+    mov rdx, rdi
+    int 0x80
+    pop rdx
     ret
 
 load_idt:
@@ -368,7 +378,7 @@ VGA_display_char:
     ; format the register of the input variable to be white
     or rdi, [cur_char_color]
     ; print the character to the current terminal position
-    mov [rax], rdi
+    mov word [rax], di
     ; increment the current terminal postion
     inc rax
     inc rax
@@ -376,12 +386,17 @@ VGA_display_char:
     mov [vga_buf_cur], rax
 
 disp_char_end:
+    mov rax, [vga_scroll_disabled]
+    cmp rax, 1
+    je display_done
+
     mov rax, [vga_buf_cur]
     mov rbx, [vga_buf_end]
 
     cmp rax, rbx
     jge VGA_scroll_down
 
+display_done:
     ; restore rax
     pop rdx
     pop rcx
@@ -470,8 +485,8 @@ irq_gen_err_handler:
     push rcx
     push rdx
     push rbx
-    push rsp
-    push rbp
+;    push rsp
+;    push rbp
     push rsi
     push rdi
     push r8
@@ -482,26 +497,52 @@ irq_gen_err_handler:
     push r13
     push r14
     push r15
+    mov [saved_rbp], rbp
+    mov [saved_rsp], rsp
     call generic_c_isr
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdi
-    pop rsi
-    pop rbp
-    pop rsp
-    pop rbx
-    pop rdx
-    pop rcx
-    pop rax
-    pop rsi
-    pop rdi
+    jmp context_switch
+
+post_switch:
+    pop r15     ; 1
+    pop r14     ; 2
+    pop r13     ; 3
+    pop r12     ; 4
+    pop r11     ; 5
+    pop r10     ; 6
+    pop r9      ; 7
+    pop r8      ; 8
+    pop rdi     ; 9
+    pop rsi     ; 10
+;    pop rbp     ; 11
+;    pop rsp     ; 12
+    pop rbx     ; 13
+    pop rdx     ; 14
+    pop rcx     ; 15
+    pop rax     ; 16
+    pop rsi     ; 17
+    pop rdi     ; 18
     iretq
+
+; will first try to just modify the rip to run some other shit
+; then will try switching to another stack
+context_switch:
+    ; check if the next proc is non null
+    mov rax, [nextProc]
+    cmp rax, 0
+    je post_switch
+
+    ; check if the next proc is the same as the current proc
+    cmp rax, [curProc]
+    je post_switch
+
+    ; if neither condition is met, then context switch to next proc
+    mov [curProc], rax
+    mov qword [nextProc], 0
+    mov qword rax, [rax]
+    mov qword rsp, rax
+
+    ; mov qword [rsp + 8 * 18], halt_wrapper
+    jmp post_switch
 
 irq0_handler:
     cli
@@ -1842,6 +1883,7 @@ vga_buf_end DQ 0xb8fa0
 vga_buf_cur DQ 0xb8000
 vga_buf_line_len DQ 0xa0
 vga_char_len DD 0x2
+vga_scroll_disabled DQ 0x0
 white_on_black DQ 0x0700
 red_on_black DQ 0x0c00
 cur_char_color DQ 0x0700
@@ -1850,6 +1892,8 @@ backspace_char DB 0x08
 cursor_char DQ 0x075f
 saved_cr2 DQ 0x0
 saved_cr3 DQ 0x0
+saved_rsp DQ 0x0
+saved_rbp DQ 0x0
 isr_err_code DQ 0x0
 
 section .bss

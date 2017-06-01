@@ -5,6 +5,7 @@
 #include "idt.h"
 #include "memoryManager.h"
 #include "utils.h"
+#include "process.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -13,9 +14,15 @@ extern uint64_t new_GDT[]; //pointer to the beginning of the new gdt
 gdt_tag gdt_desc;
 extern void load_gdt(void);
 extern void store_gdt(void);
+extern PROC_context *curProc;
+extern PROC_context *nextProc;
+extern PROC_context *procListHead;
+extern PROC_context rootProc;
 
 extern uint64_t saved_cr2;
 extern uint64_t saved_cr3;
+extern uint64_t saved_rsp;
+extern uint64_t saved_rbp;
 
 gdt_tag gdtTagStruct;
 
@@ -278,6 +285,9 @@ extern void irq255_handler(void);
 
 #define IDT_SIZE 256
 
+static void yield_internal();
+static void kexit_internal();
+static void run_internal();
 char ist_stack0[4096];
 char ist_stack1[4096];
 char ist_stack2[4096];
@@ -666,6 +676,22 @@ void page_fault_handler(int irq, int err){
     }
 }
 
+void syscall_handler(int irq, int err, uint64_t syscall_number){
+    switch(syscall_number){
+        case SYS_YIELD:
+            yield_internal();
+            break;
+        case SYS_EXIT:
+            kexit_internal();
+            break;
+        case SYS_START:
+            //just a wrapper for the context switch to be checked and triggered
+            run_internal();
+            break;
+        default:
+            asm("hlt");
+    }
+}
 void IRQ_set_handler(int irq, void *handler){
     c_ISRs[irq] = handler;
 }
@@ -739,6 +765,9 @@ void idt_init(void){
         else if(i == PAGE_FAULT_EX){
             istNum = PAGE_FAULT_STACK;
         }
+        else if(i == 0x81){
+            istNum = SYSCALL_STACK;
+        }
         //this is for testing, mapping the keyboard interrupt to another stack
         else if(i == 33){
             istNum = 4;
@@ -807,7 +836,8 @@ void idt_init(void){
     IRQ_set_handler(8, double_fault_handler);
     IRQ_set_handler(GENERAL_PROTECTION_FAULT_EX, general_protection_fault_handler);
     IRQ_set_handler(PAGE_FAULT_EX, page_fault_handler);
-
+    IRQ_set_handler(SYSCALL_VECTOR, syscall_handler);
+    IRQ_set_handler(0x81, kexit_internal);
     ist_init();
 }
 
@@ -840,7 +870,7 @@ void IRQ_clear_mask(int IRQLine){
     outby(port, value);
 }
 
-void generic_c_isr(int irq, int err){
+void generic_c_isr(int irq, int err, void *args){
     disableSerialPrinting();
     void (*loadedHandler)(int, int) = c_ISRs[irq];
 
@@ -850,7 +880,12 @@ void generic_c_isr(int irq, int err){
     }
     else {
         //ISR has been set and will be called
-        loadedHandler(irq, err);
+        if(irq == 0x80){
+            syscall_handler(irq,err,(uint64_t)args);
+        }
+        else {
+            loadedHandler(irq, err);
+        }
     }
 
     if(irq > 8){
@@ -858,4 +893,47 @@ void generic_c_isr(int irq, int err){
 	}
 	outby(0x20, 0x20);
     enableSerialPrinting();
+}
+
+static void yield_internal(){
+    //save the current context of the thread
+    curProc->rsp = saved_rsp;
+    //schedule the next thread
+    PROC_reschedule();
+}
+
+static void kexit_internal(){
+    int deadProcPid = curProc->pid;
+
+    MMU_free_pages((void*)curProc->stack_bottom, 0x100000 / 4096);
+    kfree(curProc);
+
+    //remove the deleted process from the process list
+    if(procListHead->pid == deadProcPid){
+        procListHead = procListHead->next;
+    }
+    else {
+        PROC_context *walker = procListHead;
+
+        while(walker->next){
+            if(walker->next->pid == deadProcPid){
+                walker->next = walker->next->next;
+            }
+        }
+    }
+
+    PROC_reschedule();
+}
+static void run_internal(){
+    //save the current context to rootProc
+    rootProc.pid = 0;
+
+    rootProc.rsp = saved_rsp;
+    rootProc.rbp = saved_rbp;
+
+    //set curProc = nextProc
+    curProc = nextProc;
+    nextProc = &rootProc;
+
+    PROC_reschedule();
 }
