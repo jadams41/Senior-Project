@@ -97,7 +97,7 @@ void printTagInfo(GenericTagHeader *tag){
         case ELF_SYMBOLS:
             printk("[ELF_SYMBOLS-%d]\n", ELF_SYMBOLS);
             ElfSymbols *elfs = (ElfSymbols*) tag;
-            printk("elfs info: size=%d, numSectionHeaderEntries=%d, sizeOfSectionHeaderEntry=%d, sectionIndexContainingStrTable=%d\n", elfs->size, elfs->numSectionHeaderEntries, elfs->sizeOfSectionHeaderEntry, elfs->sectionIndexContainingStrTable);
+            printk_info("elfs summary: size=%d, numSectionHeaderEntries=%d, sizeOfSectionHeaderEntry=%d, sectionIndexContainingStrTable=%d\n", elfs->size, elfs->numSectionHeaderEntries, elfs->sizeOfSectionHeaderEntry, elfs->sectionIndexContainingStrTable);
             int i;
             ElfSectionHeader *elfArrPointer = &(elfs->headerArr);
             for(i = 0; i < elfs->numSectionHeaderEntries; i++){
@@ -133,7 +133,7 @@ void potentiallyUseTag(GenericTagHeader *tag){
     }
     else if(tag->type == ELF_SYMBOLS){
         ElfSymbols *elfs = (ElfSymbols*) tag;
-        printk("elfs info: size=%d, numSectionHeaderEntries=%d, sizeOfSectionHeaderEntry=%d, sectionIndexContainingStrTable=%d\n", elfs->size, elfs->numSectionHeaderEntries, elfs->sizeOfSectionHeaderEntry, elfs->sectionIndexContainingStrTable);
+        printk_info("elfs summary: size=%d, numSectionHeaderEntries=%d, sizeOfSectionHeaderEntry=%d, sectionIndexContainingStrTable=%d\n", elfs->size, elfs->numSectionHeaderEntries, elfs->sizeOfSectionHeaderEntry, elfs->sectionIndexContainingStrTable);
         int i;
         uint64_t earliest_elf_address = -1, last_elf_address = 0;
         ElfSectionHeader *elfArrPointer = &(elfs->headerArr);

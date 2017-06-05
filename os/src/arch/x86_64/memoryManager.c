@@ -350,7 +350,7 @@ void *init_page_table(){
             break;
         }
     }
-    printk("mapped up to 0x%lx\n", current_real_address * 4096);
+    // printk("mapped up to 0x%lx\n", current_real_address * 4096);
 
     initialize_kernel_heap(p4_table);
     initialize_user_space(p4_table);
@@ -632,8 +632,8 @@ void init_kheap(){
     //fill 2048 byte pool (should have 2 blocks)
     addBlocksToPool(&pool2048, 1);
 
-    printk("p32 has %d blocks, p64 has %d blocks, p128 has %d blocks\n", pool32.avail, pool64.avail, pool128.avail);
-    printk("p512 has %d blocks, p1024 has %d blocks, p2048 has %d blocks\n", pool512.avail, pool1024.avail, pool2048.avail);
+    // printk_info("p32 has %d blocks, p64 has %d blocks, p128 has %d blocks\n", pool32.avail, pool64.avail, pool128.avail);
+    // printk_info("p512 has %d blocks, p1024 has %d blocks, p2048 has %d blocks\n", pool512.avail, pool1024.avail, pool2048.avail);
 
 }
 
