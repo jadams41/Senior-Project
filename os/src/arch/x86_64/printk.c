@@ -340,9 +340,9 @@ void VGA_display_attr_char(int x, int y, char c, char fg, char bg){
 
 	//restore fg and bg
 	setColor(color);
-	setColor(bcolor);
+	setBackgroundColor(bcolor);
 
-	vga_scroll_disabled = 1;
+	vga_scroll_disabled = 0;
 }
 
 void vgaDispCharTest(){

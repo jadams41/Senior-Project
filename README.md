@@ -21,8 +21,11 @@ This is the repository containing the implementation of a x86_64 operating syste
 10. ~~Heap allocator (kmalloc)~~
     * Largely (emphasis on largely) untested
     * however, can't think of too many edge cases
+11. ~~Cooperative Multitasking~~
+    * There is one main shitty thing in the virtual page allocator that was patched up during the building of this milestone, however needs to be fixed
+        * Previously the only place we could allocate memory was in the kernel heap, however when making stacks for user processes, I needed to hack around that big chunk of code in order to get the functionality that I needed
+        * In doing this, I simply changed the local variable holding the pml4 index before and after allocating, however this means that if I allocate 5 kheap pages and then 1 userspace page, it will start at the 6th page in userspace. 
 #### Milestones that still need to be implemented:
-11. Cooperative Multitasking
 12. Process Management and Keyboard Driver
 
 #### Things that need to be done/fixed in current code:

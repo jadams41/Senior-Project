@@ -919,6 +919,7 @@ static void kexit_internal(){
             if(walker->next->pid == deadProcPid){
                 walker->next = walker->next->next;
             }
+            walker = walker->next;
         }
     }
 

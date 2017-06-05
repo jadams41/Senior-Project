@@ -365,6 +365,7 @@ void *init_page_table(){
 //     return (pte & 0b111000000011) == 0;
 // }
 
+uint64_t user_p4_idx = 16, user_p3_idx = 0, user_p2_idx = 0, user_p1_idx = 0;
 uint64_t p4_idx = 15, p3_idx = 0, p2_idx = 0, p1_idx = 0;
 void *MMU_alloc_page(){
     store_control_registers();
@@ -446,17 +447,53 @@ void *MMU_alloc_pages(int num){
 
 void *MMU_alloc_user_page(){
     uint64_t saved_p4 = p4_idx;
-    p4_idx = 16;
+    uint64_t saved_p3 = p3_idx;
+    uint64_t saved_p2 = p2_idx;
+    uint64_t saved_p1 = p1_idx;
+
+    p4_idx = user_p4_idx;
+    p3_idx = user_p3_idx;
+    p2_idx = user_p2_idx;
+    p1_idx = user_p1_idx;
+
     void *toRet = MMU_alloc_page();
+
+    user_p4_idx = p4_idx;
+    user_p3_idx = p3_idx;
+    user_p2_idx = p2_idx;
+    user_p1_idx = p1_idx;
+
     p4_idx = saved_p4;
+    p3_idx = saved_p3;
+    p2_idx = saved_p2;
+    p1_idx = saved_p1;
+
     return toRet;
 }
 
 void *MMU_alloc_user_pages(int num){
     uint64_t saved_p4 = p4_idx;
-    p4_idx = 16;
+    uint64_t saved_p3 = p3_idx;
+    uint64_t saved_p2 = p2_idx;
+    uint64_t saved_p1 = p1_idx;
+
+    p4_idx = user_p4_idx;
+    p3_idx = user_p3_idx;
+    p2_idx = user_p2_idx;
+    p1_idx = user_p1_idx;
+
     void *toRet = MMU_alloc_pages(num);
+
+    user_p4_idx = p4_idx;
+    user_p3_idx = p3_idx;
+    user_p2_idx = p2_idx;
+    user_p1_idx = p1_idx;
+
     p4_idx = saved_p4;
+    p3_idx = saved_p3;
+    p2_idx = saved_p2;
+    p1_idx = saved_p1;
+
     return toRet;
 }
 

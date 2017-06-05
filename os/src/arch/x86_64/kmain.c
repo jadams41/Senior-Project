@@ -15,6 +15,8 @@ extern void load_page_table(uint64_t);
 extern void store_control_registers();
 extern uint64_t saved_cr2;
 extern uint64_t saved_cr3;
+extern uint64_t vga_buf_cur;
+
 
 void test(void *param){
     printk("test\n");
@@ -99,15 +101,18 @@ int kmain(void *multiboot_point, unsigned int multitest){
   // PROC_create_kthread(test, 0);
   // PROC_create_kthread(otherTest, 0);
 
-  setup_snakes(0);
+  // setup_snakes(1);
 
-  int enabled = 0;
-  while(!enabled) ;
+  // int enabled = 0;
+  // while(!enabled) ;
 
-  PROC_run();
+  // PROC_run();
 
-  printk("back from the fucking dead fucker!\n");
-
+  void *first = MMU_alloc_pages(5);
+  void *second = MMU_alloc_user_pages(5);
+  void *third = MMU_alloc_pages(5);
+  void *fourth = MMU_alloc_user_pages(5);
+  printk("here they are %lx %lx %lx %lx\n", first, second, third, fourth);
 
   while(1) asm("hlt");
 

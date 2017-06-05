@@ -351,6 +351,7 @@ LOOP_START:
     cmp rbx, 500
     jl LOOP_START
 
+    mov qword [vga_buf_cur], 0xb8000
     ret
 
 VGA_display_char:
