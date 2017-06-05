@@ -27,6 +27,7 @@ This is the repository containing the implementation of a x86_64 operating syste
         * In doing this, I simply changed the local variable holding the pml4 index before and after allocating, however this means that if I allocate 5 kheap pages and then 1 userspace page, it will start at the 6th page in userspace. 
 #### Milestones that still need to be implemented:
 12. Process Management and Keyboard Driver
+13. Block Device Driver
 
 #### Things that need to be done/fixed in current code:
 * Move everything not pertaining to booting into long mode into separate files
@@ -49,6 +50,6 @@ This is the repository containing the implementation of a x86_64 operating syste
     * However, after reading his documentation, he might be suggesting to just allocate raw virtual pages to satisfy the request
 
 #### Known issues
-* When the program runs out physical memory and a page fault is triggered on a page that is attempted to be brought in on demand, the program will halt in the page fault handler
+* ~~When the program runs out physical memory and a page fault is triggered on a page that is attempted to be brought in on demand, the program will halt in the page fault handler
     * This is exploited in the kmalloc test when we attempt to exhaust the memory, considering kmalloc grabs a virtual address
-    * Looked into what happens in linux and when kmalloc runs out of memory, just get a message that says killed and the program quits
+    * Looked into what happens in linux and when kmalloc runs out of memory, just get a message that says killed and the program quits~~
