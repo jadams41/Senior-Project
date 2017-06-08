@@ -2,6 +2,8 @@
 #include "printk.h"
 #include <stdint-gcc.h>
 #include "utils.h"
+#include "keyboard.h"
+
 #define PS2_CMD_CONF 0x20
 #define PS2_DATA 0x60
 #define PS2_CMD 0x64
@@ -17,6 +19,7 @@ uint8_t right_shift_pressed = 0;
 
 uint8_t left_ctrl_pressed = 0;
 uint8_t right_ctrl_pressed = 0;
+extern int stupidFunctionDead;
 
 char scancode_dict[256];
 char shift_down_dict[256];
@@ -73,7 +76,7 @@ void initialize_scancodes(){
 	scancode_dict[51] = ',';
 	scancode_dict[52] = '.';
 	scancode_dict[53] = '/';
-	scancode_dict[54] = 14; //left shift key	
+	scancode_dict[54] = 14; //left shift key
 	scancode_dict[57] = ' ';
 }
 
@@ -398,9 +401,16 @@ void keyboard_handler_main(char scan){
     	}
     	else {
     		char val = scancode_dict[(uint8_t)scan];
-    		uint8_t idx = (uint8_t)val;
-			printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
-    	}
+			if(left_ctrl_pressed || right_ctrl_pressed){
+				if(val == 'c'){
+					stupidFunctionDead = 1;
+					return;
+				}
+			}
+			uint8_t idx = (uint8_t)val;
+			// printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
+			KBD_write(left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
+		}
     }
     // means that key was released
     else {
@@ -415,7 +425,7 @@ void keyboard_handler_main(char scan){
     	else if(uval == 0x9d){
     		left_ctrl_pressed = right_ctrl_pressed = 0;
     	}
-    } 
+    }
 
 
 }

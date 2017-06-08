@@ -6,6 +6,7 @@
 #include "memoryManager.h"
 #include "utils.h"
 #include "process.h"
+#include "keyboard.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -604,11 +605,14 @@ void (*c_ISRs[IDT_SIZE])(int, int);
 
 //keyboard isr
 void keyboard_isr(int irq, int err){
-    enableSerialPrinting();
+    // enableSerialPrinting();
     pollInputBuffer();
     char val = inby(0x60);
     keyboard_handler_main((char)val);
-    disableSerialPrinting();
+    if(curProc != 0){
+        PROC_reschedule();
+    }
+    // disableSerialPrinting();
 }
 
 //handler for if an isr faults

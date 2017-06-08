@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "process.h"
 #include "snakes.h"
+#include "keyboard.h"
 
 extern void perform_syscall(int);
 extern void load_page_table(uint64_t);
@@ -17,19 +18,35 @@ extern uint64_t saved_cr2;
 extern uint64_t saved_cr3;
 extern uint64_t vga_buf_cur;
 
-
-void test(void *param){
-    printk("test\n");
-    yield();
-    printk("test again\n");
-    kexit();
+int stupidFunctionDead = 0;
+extern PROC_context *curProc;
+void stupidFunction(){
+    int x = 0, count = 0, largerCount = 0;
+    VGA_clear();
+    printk("\n");
+    while(1){
+        if(stupidFunctionDead){
+            printk("\n");
+            printk_info("done with the stupid function\n");
+            kexit();
+        }
+        if(++count == 20000){
+            VGA_display_attr_char(x - 1, 0, ' ', VGA_BLACK, VGA_BLACK);
+            x %= VGA_col_count();
+            VGA_display_attr_char(x, 0, '*', VGA_CYAN, VGA_BLACK);
+            x += 1;
+            count = 0;
+            largerCount += 1;
+        }
+        yield();
+    }
 }
 
-void otherTest(void *param){
-    printk("boooom\n");
-    yield();
-    printk("boooom again\n");
-    kexit();
+void grabKeyboardInput(){
+    printk("keyboard listening process is go (PID=%d)\n", curProc->pid);
+    while(1){
+        printk("%c", KBD_read());
+    }
 }
 
 int kmain(void *multiboot_point, unsigned int multitest){
@@ -37,8 +54,8 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   //set up and test the VGA
   VGA_clear();
-  vgaDispCharTest();
-  VGA_display_str("string print test\n");
+  // vgaDispCharTest();
+  // VGA_display_str("string print test\n");
 
   //set up the things needed for printk
   initialize_scancodes();
@@ -53,6 +70,8 @@ int kmain(void *multiboot_point, unsigned int multitest){
   idt_init();
   IRQ_clear_mask(KEYBOARD_IRQ);
   IRQ_clear_mask(SERIAL_COM1_IRQ);
+
+  init_kbd_state();
 
   //turn on interrupts
   asm("sti");
@@ -72,7 +91,6 @@ int kmain(void *multiboot_point, unsigned int multitest){
   //iterate over and parse all multiboot tags
   while(curTag){
       potentiallyUseTag(curTag);
-    //   printTagInfo(curTag);
       curTag = getNextTag(curTag);
   }
 
@@ -83,15 +101,20 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   init_kheap();
 
-  // setup_snakes(1);
-  // PROC_run();
-  // printk("done with those snakes!\n");
+  PROC_create_kthread((kproc_t)grabKeyboardInput, (void *)0);
+  // PROC_create_kthread((kproc_t)stupidFunction, (void *)0);
 
-  // int enabled = 0;
-  // while(!enabled) ;
+  setup_snakes(1);
 
+  int enabled = 0;
+  while(!enabled);
 
-  while(1) asm("hlt");
+  // printk_info("done running processes\n");
+
+  while(1){
+      PROC_run();
+      asm("hlt");
+  }
 
   return 0;
 }

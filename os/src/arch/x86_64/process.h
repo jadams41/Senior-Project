@@ -13,6 +13,10 @@ struct PROC_context {
     struct PROC_context *next;
 };
 typedef struct PROC_context PROC_context;
+
+typedef struct {
+    PROC_context *head;
+} ProcessQueue;
 /**
   * runs until all processes have completed
   * main driver function
@@ -33,11 +37,12 @@ PROC_context *PROC_create_kthread(kproc_t entry_point, void *arg);
 
 void PROC_reschedule(void);
 
-// static inline void yield(void)
-// {
-//     //   asm volatile ( "INT $123" );
-// }
 void yield(void);
 void kexit(void);
+
+void PROC_block_on(ProcessQueue *, int enable_ints);
+void PROC_unblock_all(ProcessQueue *);
+void PROC_unblock_head(ProcessQueue *);
+void PROC_init_queue(ProcessQueue *);
 
 #endif

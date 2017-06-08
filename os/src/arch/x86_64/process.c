@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "process.h"
 #include "memoryManager.h"
+#include "printk.h"
 
 extern uint64_t saved_rsp;
 extern uint64_t saved_rbp;
@@ -71,22 +72,6 @@ PROC_context *PROC_create_kthread(kproc_t entry_point, void *arg){
 }
 
 void PROC_reschedule(){
-    // if(curProc){
-    //     if(!nextProc){
-    //         nextProc = curProc;
-    //     }
-    //     else {
-    //         while(nextProc->next){
-    //             nextProc->next = curProc;
-    //         }
-    //     }
-    // }
-    // if(!nextProc){
-    //     nextProc = &rootProc;
-    //     //return to the master context
-    // }
-    // curProc = nextProc;
-    // nextProc = nextProc->next;
     if(!curProc || !curProc->next){
         if(!procListHead){
             nextProc = &rootProc;
@@ -106,4 +91,92 @@ void yield(){
 
 void kexit(){
     asm volatile ("INT $129");
+}
+
+/********** BEGIN PROCESS MANAGEMENT/BLOCKING FUNCTIONS **********/
+
+static void addCtxToPQ(ProcessQueue *pq, PROC_context *ctx){
+    ctx->next = (PROC_context*)0;
+
+    if(!pq->head){
+        pq->head = ctx;
+    }
+    else {
+        PROC_context *walker = pq->head;
+        while(walker->next) walker = walker->next;
+        walker->next = ctx;
+    }
+}
+
+void PROC_block_on(ProcessQueue *pq, int enable_ints){
+    if(!pq){
+        printk_err("tried to block current process, but the process queue has not been initialized\n");
+        return;
+    }
+
+    int mypid = curProc->pid;
+
+    PROC_context *listWalker = procListHead, *lastNode = (PROC_context*)0;
+    while(1){
+        //reached the end of the list
+        if(!listWalker){
+            printk_err("proc that was tried to block wasn't on proc queue, seems like an Ethan problem\n");
+            asm("hlt");
+        }
+        //found the process in the list
+        if(listWalker->pid == mypid){
+            if(!lastNode){
+                procListHead = listWalker->next;
+            }
+            else {
+                lastNode->next = listWalker->next;
+            }
+            addCtxToPQ(pq, listWalker);
+            if(enable_ints)
+                asm("STI");
+            break;
+        }
+
+        lastNode = listWalker;
+        listWalker = listWalker->next;
+    }
+    yield();
+}
+
+void PROC_unblock_all(ProcessQueue *pq){
+    if(!procListHead){
+        procListHead = pq->head;
+    }
+    else {
+        PROC_context *procPtr = procListHead;
+        while(procPtr->next) ;
+        procPtr->next = pq->head;
+    }
+    procListHead = (PROC_context*)0;
+}
+
+void PROC_unblock_head(ProcessQueue *pq){
+    if(!pq->head){
+        printk_err("Tried to unblock head of empty process queue\n");
+        return;
+    }
+    if(!procListHead){
+        procListHead = pq->head;
+    }
+    else {
+        PROC_context *procPtr = procListHead;
+        while(procPtr->next) procPtr = procPtr->next;
+        procPtr->next = pq->head;
+    }
+
+    //pop the unblocked head off of the process queue
+    PROC_context *unblocked = pq->head;
+    pq->head = pq->head->next;
+
+    //unlink the rest of the process queue from the unblocked process
+    unblocked->next = (PROC_context*)0;
+}
+
+void PROC_init_queue(ProcessQueue *pq){
+    pq->head = (PROC_context*)0;
 }

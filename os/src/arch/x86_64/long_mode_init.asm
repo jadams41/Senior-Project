@@ -1236,6 +1236,7 @@ irq127_handler:
     jmp generic_irq_handler
 
 irq128_handler:
+    sti
     push rdi
     mov rdi, 128
     jmp generic_irq_handler
@@ -1899,5 +1900,4 @@ isr_err_code DQ 0x0
 
 section .bss
 align 4096
-new_GDT
-    resb 4096
+new_GDT resb 4096
