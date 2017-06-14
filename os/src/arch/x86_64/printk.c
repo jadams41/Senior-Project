@@ -6,6 +6,60 @@
 extern uint64_t vga_buf_cur;
 extern uint64_t vga_scroll_disabled;
 
+int printWidth = 0;
+int spacesOrZeros = 0; //spaces=0 (default) zeros=1
+
+static int setPrintWidth(char *fmt){
+	int newPrintWidth = 0;
+	int stillParsing = 1;
+	int numCharsConsumed = 0;
+
+	spacesOrZeros = *fmt == '0';
+
+	while(stillParsing){
+		newPrintWidth *= 10;
+		numCharsConsumed += 1;
+		switch(*fmt){
+			case '0':
+				break;
+			case '1':
+				newPrintWidth += 1;
+				break;
+			case '2':
+				newPrintWidth += 2;
+				break;
+			case '3':
+				newPrintWidth += 3;
+				break;
+			case '4':
+				newPrintWidth += 4;
+				break;
+			case '5':
+				newPrintWidth += 5;
+				break;
+			case '6':
+				newPrintWidth += 6;
+				break;
+			case '7':
+				newPrintWidth += 7;
+				break;
+			case '8':
+				newPrintWidth += 8;
+				break;
+			case '9':
+				newPrintWidth += 9;
+				break;
+			default:
+				stillParsing = 0;
+				numCharsConsumed -= 1;
+				newPrintWidth /= 10;
+		}
+		fmt++;
+	}
+	printWidth = newPrintWidth;
+	return numCharsConsumed;
+}
+
 void setColor(char newColor){
 	cur_char_color &= 0xF0FF;
 	cur_char_color |= (newColor << 8);
@@ -41,13 +95,33 @@ void printLineAcrossScreen(){
  * recursively prints an integer through modulo
  * and division manipulation
  */
-void printInteger(int i){
+void printInteger(int i, int recur){
+	int numPrinted = 1; //last digit
+	int printMinus = 0;
 	if(i < 0){
-		printCharToVGAandSER('-');
+		if(!spacesOrZeros){
+			printMinus = 1;
+		}
+		else {
+			printCharToVGAandSER('-');
+		}
 		i *= -1;
+		numPrinted += 1;
 	}
+	if(!recur){
+		int j = 10;
+		while(1){
+			if(!(i / j)) break;
+			numPrinted += 1;
+			j *= 10;
+		}
+		while(numPrinted++ < printWidth){
+			printCharToVGAandSER(spacesOrZeros ? '0' : ' ');
+		}
+	}
+	if(printMinus) printCharToVGAandSER('-');
 	if(i / 10){
-		printInteger(i / 10);
+		printInteger(i / 10, 1);
 	}
 	printCharToVGAandSER((char)(48 + i % 10));
 }
@@ -55,16 +129,40 @@ void printInteger(int i){
 /**
  * same as printInteger but accepts an unsigned integer
  */
-void printUnsignedInteger(unsigned int i){
+void printUnsignedInteger(unsigned int i, int recur){
+	int numPrinted = 1;
+	if(!recur){
+		int j = 10;
+		while(1){
+			if(!(i / j)) break;
+			numPrinted += 1;
+			j *= 10;
+		}
+		while(numPrinted++ < printWidth){
+			printCharToVGAandSER(spacesOrZeros ? '0' : ' ');
+		}
+	}
 	if(i / 10){
-		printUnsignedInteger(i / 10);
+		printUnsignedInteger(i / 10, 1);
 	}
 	printCharToVGAandSER((char)(48 + i % 10));
 }
 
-void printUnsignedHex(unsigned int i, short isUppercase){
+void printUnsignedHex(unsigned int i, short isUppercase, int recur){
+	int numPrinted = 1;
+	if(!recur){
+		int j = 16;
+		while(1){
+			if(!(i / j)) break;
+			numPrinted += 1;
+			j *= 16;
+		}
+		while(numPrinted++ < printWidth){
+			printCharToVGAandSER(spacesOrZeros ? '0' : ' ');
+		}
+	}
 	if(i / 16){
-		printUnsignedHex(i / 16, isUppercase);
+		printUnsignedHex(i / 16, isUppercase, 1);
 	}
 	char charToPrint;
 	i %= 16;
@@ -84,16 +182,16 @@ void printUnsignedHex(unsigned int i, short isUppercase){
 
 void printShort(short s){
 	int i = 0 + s;
-	printInteger(i);
+	printInteger(i, 0);
 }
 
 void printUnsignedShort(unsigned short s){
 	unsigned int i = 0 + s;
-	printUnsignedInteger(i);
+	printUnsignedInteger(i, 0);
 }
 
 void printHexShort(unsigned short s){
-	printUnsignedHex(s, 0);
+	printUnsignedHex(s, 0, 0);
 }
 
 void printLong(long l){
@@ -164,9 +262,10 @@ static void printk_var(const char *fmtStr, va_list args){
 	while(1){
 		if(!*fmtStr) break;
 		if(*fmtStr == '%'){
+			fmtStr += setPrintWidth((char*)fmtStr + 1);
 			switch(*(fmtStr + 1)){
 				case 'd':
-					printInteger(va_arg(args, int));
+					printInteger(va_arg(args, int), 0);
 					break;
 				case 's':
 					str = va_arg(args, char*);
@@ -179,19 +278,19 @@ static void printk_var(const char *fmtStr, va_list args){
 					printCharToVGAandSER('%');
 					break;
 				case 'u':
-					printUnsignedInteger(va_arg(args, unsigned int));
+					printUnsignedInteger(va_arg(args, unsigned int), 0);
 					break;
 				case 'x':
-					printUnsignedHex(va_arg(args, unsigned int), 0);
+					printUnsignedHex(va_arg(args, unsigned int), 0, 0);
 					break;
 				case 'X':
-					printUnsignedHex(va_arg(args, unsigned int), 1);
+					printUnsignedHex(va_arg(args, unsigned int), 1, 0);
 					break;
 				case 'c':
 					printCharToVGAandSER((char)va_arg(args, int));
 					break;
 				case 'p':
-					printUnsignedHex((unsigned int)va_arg(args, unsigned int), 0);
+					printUnsignedHex((unsigned int)va_arg(args, unsigned int), 0, 0);
 					break;
 				case 'h':
 					switch(*(fmtStr + 2)){

@@ -11,6 +11,16 @@ uint8_t inline inb(uint16_t port) {
     return val;
 }
 
+void inline outw(uint16_t port, uint16_t value){
+    asm volatile("outw %%ax, %%dx": :"d" (port), "a" (value));
+}
+
+uint16_t inline inw(uint16_t port){
+    uint16_t ret;
+	asm volatile("inw %%dx, %%ax":"=a"(ret):"d"(port));
+	return ret;
+}
+
 /***** page table functions *****/
 int entry_present(uint64_t entry){
     //NOTE: this only checks the present bits and not the on demand bits

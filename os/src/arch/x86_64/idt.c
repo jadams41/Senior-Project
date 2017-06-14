@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "process.h"
 #include "keyboard.h"
+#include "blockDeviceDriver.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -615,6 +616,14 @@ void keyboard_isr(int irq, int err){
     // disableSerialPrinting();
 }
 
+void ata_primary_isr(int irq, int err){
+    // printk_info("received an ata interrupt\n");
+    int requestUnblocked = handleAndDequeueBlockDevicePending();
+    if(!curProc->pid && requestUnblocked){
+        yield_internal();
+    }
+}
+
 //handler for if an isr faults
 void double_fault_handler(int irq, int err){
     printk_err("double fault\n");
@@ -809,7 +818,7 @@ void idt_init(void){
 	 * Intel reserved the first 32 interrupts for cpu exceptions
 	 */
 	outby(0x21, 0x20);
-	//second PIC starts 8 bytes after the first because each has 8 lines
+	//second PIC starts 8 lines after the first because each has 8 lines
 	outby(0xA1, 0x28);
 
 	/* ICW3 - setup cascading */
@@ -838,6 +847,7 @@ void idt_init(void){
     IRQ_set_handler(33, keyboard_isr);
     IRQ_set_handler(36, serial_isr);
     IRQ_set_handler(8, double_fault_handler);
+    IRQ_set_handler(46, ata_primary_isr);
     IRQ_set_handler(GENERAL_PROTECTION_FAULT_EX, general_protection_fault_handler);
     IRQ_set_handler(PAGE_FAULT_EX, page_fault_handler);
     IRQ_set_handler(SYSCALL_VECTOR, syscall_handler);
@@ -881,6 +891,7 @@ void generic_c_isr(int irq, int err, void *args){
     if(loadedHandler == 0){
         //interrupt was triggered without a loaded isr in the IDT
         printk_err("received interrupt on IRQ %d, however there was no ISR installed\n", irq);
+        asm("HLT");
     }
     else {
         //ISR has been set and will be called
@@ -892,10 +903,12 @@ void generic_c_isr(int irq, int err, void *args){
         }
     }
 
-    if(irq > 8){
-		outby(0xA0, 0x20);
+    if(irq >= 0x20 && irq < 0x30){
+        if(irq > 0x28){
+        	outby(0xA0, 0x20);
+        }
+        outby(0x20, 0x20);
 	}
-	outby(0x20, 0x20);
     enableSerialPrinting();
 }
 
@@ -922,6 +935,7 @@ static void kexit_internal(){
         while(walker->next){
             if(walker->next->pid == deadProcPid){
                 walker->next = walker->next->next;
+                break;
             }
             walker = walker->next;
         }

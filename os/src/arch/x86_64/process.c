@@ -64,9 +64,21 @@ PROC_context *PROC_create_kthread(kproc_t entry_point, void *arg){
     }
     newProcCtx->rsp = ((uint64_t)stack_accessor) + 8;
 
-    //put at the beginning of the list
-    newProcCtx->next = procListHead;
-    procListHead = newProcCtx;
+    newProcCtx->next = 0;
+    //put at the end of the list
+    if(!procListHead){
+        procListHead = newProcCtx;
+    }
+    else {
+        PROC_context *walker = procListHead;
+        while(1){
+            if(walker->next == 0){
+                walker->next = newProcCtx;
+                break;
+            }
+            walker = walker->next;
+        }
+    }
 
     return newProcCtx;
 }
@@ -157,7 +169,7 @@ void PROC_unblock_all(ProcessQueue *pq){
 
 void PROC_unblock_head(ProcessQueue *pq){
     if(!pq->head){
-        printk_err("Tried to unblock head of empty process queue\n");
+        printk_warn("Tried to unblock head of empty process queue\n");
         return;
     }
     if(!procListHead){

@@ -486,8 +486,8 @@ irq_gen_err_handler:
     push rcx
     push rdx
     push rbx
-;    push rsp
-;    push rbp
+    ; push rsp
+    ; push rbp
     push rsi
     push rdi
     push r8
@@ -514,8 +514,8 @@ post_switch:
     pop r8      ; 8
     pop rdi     ; 9
     pop rsi     ; 10
-;    pop rbp     ; 11
-;    pop rsp     ; 12
+    ; pop rbp     ; 11
+    ; pop rsp     ; 12
     pop rbx     ; 13
     pop rdx     ; 14
     pop rcx     ; 15
@@ -791,41 +791,49 @@ irq38_handler:
     jmp generic_irq_handler
 
 irq39_handler:
+    cli
     push rdi
     mov rdi, 39
     jmp generic_irq_handler
 
 irq40_handler:
+    cli
     push rdi
     mov rdi, 40
     jmp generic_irq_handler
 
 irq41_handler:
+    cli
     push rdi
     mov rdi, 41
     jmp generic_irq_handler
 
 irq42_handler:
+    cli
     push rdi
     mov rdi, 42
     jmp generic_irq_handler
 
 irq43_handler:
+    cli
     push rdi
     mov rdi, 43
     jmp generic_irq_handler
 
 irq44_handler:
+    cli
     push rdi
     mov rdi, 44
     jmp generic_irq_handler
 
 irq45_handler:
+    cli
     push rdi
     mov rdi, 45
     jmp generic_irq_handler
 
 irq46_handler:
+    cli
     push rdi
     mov rdi, 46
     jmp generic_irq_handler
