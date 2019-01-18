@@ -1,3 +1,8 @@
+This is the repository containing my work on Senior Project at Cal Poly.
+
+
+AdamsOS/README
+----------
 This is the repository containing the implementation of a x86_64 operating system for CPE454.
 
 ### Status
