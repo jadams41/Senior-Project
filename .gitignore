@@ -10,6 +10,7 @@ os/build/*
 
 #all stupid emacs autosave files
 *~
+#*#
 
 #all mac folder preference files
 *DS_Store*
