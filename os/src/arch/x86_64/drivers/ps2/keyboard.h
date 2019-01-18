@@ -1,7 +1,7 @@
 #ifndef KEYBOARD_DRIVER
 #define KEYBOARD_DRIVER
 
-#include "process.h"
+#include "../../types/process.h"
 
 typedef struct {
     char kbd_buffer[160];

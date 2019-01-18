@@ -1,7 +1,7 @@
 #include "ps2Driver.h"
-#include "printk.h"
+#include "../../utils/printk.h"
 #include <stdint-gcc.h>
-#include "utils.h"
+#include "../../utils/utils.h"
 #include "keyboard.h"
 
 #define PS2_CMD_CONF 0x20

@@ -1,5 +1,5 @@
 #include <stdint-gcc.h>
-#include "kernel_functions.h"
+#include "utils/kernel_functions.h"
 
 //todo: figure out what these args correspond to
 int kmain(void *multiboot_point, unsigned int multitest){

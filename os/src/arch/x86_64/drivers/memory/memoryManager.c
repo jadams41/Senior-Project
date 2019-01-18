@@ -1,7 +1,7 @@
 #include "memoryManager.h"
 #include <stdint-gcc.h>
-#include "printk.h"
-#include "utils.h"
+#include "../../utils/printk.h"
+#include "../../utils/utils.h"
 
 extern void store_control_registers();
 extern uint64_t saved_cr2;

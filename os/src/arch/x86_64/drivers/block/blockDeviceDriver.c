@@ -1,10 +1,10 @@
 #include <stdint-gcc.h>
 #include "blockDeviceDriver.h"
-#include "memoryManager.h"
-#include "string.h"
-#include "utils.h"
-#include "printk.h"
-#include "process.h"
+#include "../memory/memoryManager.h"
+#include "../../types/string.h"
+#include "../../utils/utils.h"
+#include "../../utils/printk.h"
+#include "../../types/process.h"
 
 static ProcessQueue blockDevicePending; //processes waiting on response from disk
 

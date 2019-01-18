@@ -7,12 +7,16 @@ CC=~/opt/cross64/x86_64-elf-4.9.1-Linux-x86_64/bin/x86_64-elf-gcc
 
 linker_script := src/arch/$(arch)/linker.ld
 grub_cfg := src/arch/$(arch)/grub.cfg
+
+
 assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
 	build/arch/$(arch)/%.o, $(assembly_source_files))
-c_source_files := $(wildcard src/arch/$(arch)/*.c)
+
+c_source_files := $(shell find src/arch/$(arch)/ -name "*.c")
 c_object_files := $(patsubst src/arch/$(arch)/%.c, \
 	build/arch/$(arch)/%.o, $(c_source_files))
+
 symbol_link_file := symbol.bin
 
 .PHONY: all clean run iso

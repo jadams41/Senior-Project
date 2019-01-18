@@ -1,8 +1,8 @@
 #include <stdint-gcc.h>
-#include "idt.h"
+#include "../drivers/interrupts/idt.h"
+#include "../drivers/memory/memoryManager.h"
 #include "process.h"
-#include "memoryManager.h"
-#include "printk.h"
+#include "../utils/printk.h"
 
 extern uint64_t saved_rsp;
 extern uint64_t saved_rbp;

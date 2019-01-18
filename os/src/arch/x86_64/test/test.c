@@ -1,7 +1,7 @@
 #include <stdint-gcc.h>
 #include "test.h"
-#include "printk.h"
-#include "memoryManager.h"
+#include "../utils/printk.h"
+#include "../drivers/memory/memoryManager.h"
 
 /********** serial tests **********/
 //this test writes 320 of the same character to both the local output
