@@ -1,8 +1,18 @@
 #ifndef KERNEL_FUNCTIONS
 #define KERNEL_FUNCTIONS
 
+typedef struct {
+  // information to parse multiboot tags
+  void *multiboot_point;
+  unsigned int multitest;
+
+  // settings for kernel bringup
+  uint8_t enable_keyboard_proc;
+} kernel_bringup_config;
+
 /* functions to manage kernel state */
-void bringupKernel(void *multiboot_point, unsigned int multitest);
+void bringupKernel(kernel_bringup_config *conf);
+void runKernelProcesses();
 
 /* functions called inside of a kernel process */
 void readBlock(void *params);

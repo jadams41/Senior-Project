@@ -26,8 +26,9 @@ extern uint64_t vga_buf_cur;
 
 struct BlockDev *ata = 0;
 extern PROC_context *curProc;
+int stupidFunctionDead = 0;
 
-void bringupKernel(void *multiboot_point, unsigned int multitest){
+void bringupKernel(kernel_bringup_config *conf){
   /* turn off interrupts while setting up kernel */
   asm("cli");
 
@@ -64,7 +65,7 @@ void bringupKernel(void *multiboot_point, unsigned int multitest){
 
   /* take the multiboot_point from entering long mode, 
    * and figure out where tags BEGIN */
-  TagStructureInfo *tagStructureInfo = (TagStructureInfo*)multiboot_point;
+  TagStructureInfo *tagStructureInfo = (TagStructureInfo*)conf->multiboot_point;
   GenericTagHeader *curTag = (GenericTagHeader*)((uint64_t)tagStructureInfo + 8);
 
   /* iterate over and parse all multiboot tags */
@@ -85,7 +86,16 @@ void bringupKernel(void *multiboot_point, unsigned int multitest){
   init_kheap();
 
   /* create a kernel thread for handling PS/2 interrupts */
-  PROC_create_kthread((kproc_t)grabKeyboardInput, (void *)0);
+  if(conf->enable_keyboard_proc){
+    PROC_create_kthread((kproc_t)grabKeyboardInput, (void *)0);
+  }
+}
+
+void runKernelProcesses(){
+  while(1){
+    PROC_run();
+    asm("hlt");
+  }
 }
 
 //takes params uint64_t blockNum, void *dst
