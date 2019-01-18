@@ -30,14 +30,14 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
 #### Milestone 0: *Set up Senior Project and Document Project Scope*
   1. Take care of administrative tasks for setting up Senior Project
   
-    - [ ] Create project proposal documenting scope and objectives.
-    - [ ] Procure project advisor.
-    - [ ] Submit Pre-Enrollment Proposal to officially enroll in Senior Project I.
+    - [X] Create project proposal documenting scope and objectives.
+    - [X] Procure project advisor.
+    - [X] Submit Pre-Enrollment Proposal to officially enroll in Senior Project I.
     
   2. Set up Project
   
-    - [ ] Create GitHub Repository for Documenting project information
-    - [ ] Populate project's `README` with initial information regarding project background, scope&objectives, and tentative timeline of critical work.
+    - [X] Create GitHub Repository for Documenting project information
+    - [X] Populate project's `README` with initial information regarding project background, scope&objectives, and tentative timeline of critical work.
     - [ ] Forward pdf of Project proposal + GitHub repository to project advisor.
 
 #### Milestone 1: *Necessary Maintenance and Preparations for New Development*
