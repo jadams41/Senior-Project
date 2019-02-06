@@ -1,7 +1,7 @@
 #include "memoryManager.h"
 #include <stdint-gcc.h>
-#include "../../utils/printk.h"
-#include "../../utils/utils.h"
+#include "utils/printk.h"
+#include "utils/utils.h"
 
 extern void store_control_registers();
 extern uint64_t saved_cr2;
@@ -150,13 +150,16 @@ static int populate_pf_list(){
             //grab another frame for the nodes list
             next_frame_addr = grab_next_frame(info);
             if(next_frame_addr == 0){
-                return 1;
+	      return 1;
             }
             info->node_frame.beg_addr = info->node_frame.current_position_in_frame = next_frame_addr;
             info->node_frame.end_addr = info->node_frame.beg_addr + 4096;
         }
         next_frame_addr = grab_next_frame(info);
-        if(!next_frame_addr) return 1;
+        if(!next_frame_addr) {
+	  printk("failing at spot 2\n");
+	  return 1;
+	}
 
         new_node = (frame_list_node*)info->node_frame.current_position_in_frame;
         new_node->used = 0;

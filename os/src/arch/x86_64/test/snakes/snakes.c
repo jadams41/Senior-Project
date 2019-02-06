@@ -31,9 +31,9 @@
 
 #include "snakes.h"
 // #include "types.h"
-#include "../../drivers/memory/memoryManager.h"
-#include "../../utils/printk.h"
-#include "../../types/process.h"
+#include "drivers/memory/memoryManager.h"
+#include "utils/printk.h"
+#include "types/process.h"
 
 #define SN_LENGTH 10
 #define SN_BODY_CHAR '*'

@@ -2,7 +2,7 @@
 #define BLOCK_DEVICE_DRIVER
 
 #include <stdint-gcc.h>
-#include "../../types/process.h"
+#include "types/process.h"
 
 #define PRIMARY_ATA_DATA 0x1F0
 #define PRIMARY_ATA_FEATURES 0x1F1

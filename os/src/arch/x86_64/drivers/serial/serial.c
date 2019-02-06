@@ -1,8 +1,8 @@
 #include <stdint-gcc.h>
 
 #include "serial.h"
-#include "../../utils/utils.h"
-#include "../../utils/printk.h"
+#include "utils/utils.h"
+#include "utils/printk.h"
 
 State curState;
 int stateInitialized = 0;

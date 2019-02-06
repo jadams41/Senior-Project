@@ -1,13 +1,13 @@
 #include <stdint-gcc.h>
-#include "../../utils/printk.h"
-#include "../ps2/ps2Driver.h"
-#include "../serial/serial.h"
-#include "idt.h"
-#include "../memory/memoryManager.h"
-#include "../../utils/utils.h"
-#include "../../types/process.h"
-#include "../ps2/keyboard.h"
-#include "../block/blockDeviceDriver.h"
+#include "utils/printk.h"
+#include "drivers/ps2/ps2Driver.h"
+#include "drivers/serial/serial.h"
+#include "drivers/interrupts/idt.h"
+#include "drivers/memory/memoryManager.h"
+#include "utils/utils.h"
+#include "types/process.h"
+#include "drivers/ps2/keyboard.h"
+#include "drivers/block/blockDeviceDriver.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);

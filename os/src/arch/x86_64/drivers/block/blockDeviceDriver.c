@@ -1,10 +1,10 @@
 #include <stdint-gcc.h>
-#include "blockDeviceDriver.h"
-#include "../memory/memoryManager.h"
-#include "../../types/string.h"
-#include "../../utils/utils.h"
-#include "../../utils/printk.h"
-#include "../../types/process.h"
+#include "drivers/block/blockDeviceDriver.h"
+#include "drivers/memory/memoryManager.h"
+#include "types/string.h"
+#include "utils/utils.h"
+#include "utils/printk.h"
+#include "types/process.h"
 
 static ProcessQueue blockDevicePending; //processes waiting on response from disk
 
@@ -168,7 +168,7 @@ struct BlockDev *ata_probe(uint16_t base, uint16_t master, uint8_t slave, uint8_
         printk_info("this device supports LBA48 mode\n");
     }
     uint64_t *numSectors = (uint64_t*)(identifyDataValues + 100);
-    printk_info("the number of available sectors on the disk: %lx\n", *numSectors);
+    printk_info("the number of available sectors on the disk: 0x%lx\n", *numSectors);
 
     struct ATABlockDev *ata;
     ata = kmalloc(sizeof(*ata));

@@ -1,6 +1,6 @@
 #include "keyboard.h"
-#include "../memory/memoryManager.h"
-#include "../../utils/printk.h"
+#include "drivers/memory/memoryManager.h"
+#include "utils/printk.h"
 
 static KBD_state kbd;
 

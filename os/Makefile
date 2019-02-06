@@ -3,19 +3,21 @@
 arch ?= x86_64
 vm_prog ?= qemu-system-x86_64
 
-loop_dev_1 ?= /dev/loop2
-loop_dev_2 ?= /dev/loop3
+loop_dev_1 ?= /dev/loop3
+loop_dev_2 ?= /dev/loop4
 
 fat_bs ?= 512
-fat_num_blocks ?= 98304 #was 32768, but was complaining "not enough clusters for a 32-bit fat"
+fat_num_blocks ?= 196575
+fat_blank_img ?= .cache/fat_templates/blank_fat_$(fat_bs)_$(fat_num_blocks).img
 
+# ===== COMPILER CONFIGURATION =====
+incl_path := $(shell pwd)/src/arch/x86_64/
 
-
-# ===== BUILD UTILITY FILES =====
 # cross-compiler
 CC=~/opt/cross64/x86_64-elf-4.9.1-Linux-x86_64/bin/x86_64-elf-gcc
 
-# linker script used to arrange the compiled kernel object files into a proper kernel binary 
+# ===== BUILD UTILITY FILES =====
+# linker script used to arrange the compiled kernel object files into a proper kernel binary
 linker_script := src/arch/$(arch)/linker.ld
 
 # file used to configure grub when generating OS image
@@ -48,7 +50,7 @@ c_object_files := $(patsubst src/arch/$(arch)/%.c, \
 	build/arch/$(arch)/%.o, $(c_source_files))
 
 # targets which do not produce file with name of target
-.PHONY: all clean run iso
+.PHONY: all clean run iso fat
 
 all: $(kernel)
 
@@ -59,20 +61,24 @@ clean:
 	-sudo umount /mnt/fatgrub
 	-sudo losetup -d $(loop_dev_1)
 	-sudo losetup -d $(loop_dev_2)
-	@rm -rf build
+	-rm -rf build
 	-rm $(symbol_link_file)
 
 
 run: $(iso)
-	@$(vm_prog) -s -cdrom $(iso) -serial stdio
+	sudo $(vm_prog) -machine ubuntu -s -cdrom $(iso) -serial stdio
 
 runf: $(fat)
-	@$(vm_prog) -s -drive format=raw,file=$(fat) -serial stdio
+	@sudo $(vm_prog) -machine ubuntu -s -drive format=raw,file=$(fat) -serial stdio
 
 runb: $(iso)
 	@bochs -q
 
 iso: $(iso)
+
+$(fat_blank_img):
+	mkdir -p .cache/fat_templates
+	dd if=/dev/zero of=$(fat_blank_img) bs=$(fat_bs) count=$(fat_num_blocks)
 
 fat: $(fat)
 
@@ -80,14 +86,14 @@ $(iso): $(kernel) $(grub_cfg)
 	@mkdir -p build/isofiles/boot/grub
 	@cp $(kernel) build/isofiles/boot/kernel.bin
 	@cp $(grub_cfg) build/isofiles/boot/grub
-	@grub-mkrescue -o $(iso) build/isofiles 2> /dev/null
+	@grub-mkrescue --recheck -o $(iso) build/isofiles 2> /dev/null
 	@rm -r build/isofiles
 
-$(fat): $(kernel) $(grub_cfg)
+$(fat): $(kernel) $(grub_cfg) $(fat_blank_img) $(is_superuser)
 	mkdir -p build/isofiles/boot/grub
 	cp $(kernel) build/isofiles/boot/kernel.bin
 	cp $(grub_cfg) build/isofiles/boot/grub
-	dd if=/dev/zero of=$(fat) bs=$(fat_bs) count=$(fat_num_blocks)
+	cp $(fat_blank_img) $(fat)
 	parted $(fat) mklabel msdos
 	parted $(fat) mkpart primary fat32 2048s 30720s
 	parted $(fat) set 1 boot on
@@ -95,14 +101,21 @@ $(fat): $(kernel) $(grub_cfg)
 	sudo losetup $(loop_dev_2) $(fat) -o 1048576
 	sudo mkdosfs -F32 -f 2 $(loop_dev_2)
 	sudo mount $(loop_dev_2) /mnt/fatgrub
-	sudo grub-install --root-directory=/mnt/fatgrub --no-floppy --modules="normal part_msdos ext2 multiboot" $(loop_dev_1)
+	sudo grub-install --root-directory=/mnt/fatgrub --no-floppy --recheck --modules="normal part_msdos ext2 multiboot2" $(loop_dev_1)
 	sudo cp -r build/isofiles/* /mnt/fatgrub
+	sudo echo "blaaaaaaaah" > /mnt/fatgrub/zzzzzzzzzzzzzz.txt
+	sudo echo "blaaaaaaaah" > /mnt/fatgrub/testing123.abc
+	sudo echo "blaaaaaaaah" > /mnt/fatgrub/AAAAAA.txt
+	sudo echo "test" > /mnt/fatgrub/a.t
+	ls -l --full-time /mnt/fatgrub > fatgrub.ls
 	sudo umount /mnt/fatgrub
-	losetup -d $(loop_dev_1) #todo: figure out if I should be doing this for loop_dev_2 as well
+	losetup -d $(loop_dev_1)
+	losetup -d $(loop_dev_2)
+	rm -rf build/isofiles
 
 $(kernel): $(assembly_object_files) $(c_object_files) $(linker_script)
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(c_object_files)
-	@ln -s $(kernel) $(symbol_link_file)
+	@-ln -s $(kernel) $(symbol_link_file)
 
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
@@ -112,4 +125,4 @@ build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 #compile c files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.c
 	@mkdir -p $(shell dirname $@)
-	@$(CC) -c -g $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone
+	@$(CC) -c -g -I$(incl_path) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone
