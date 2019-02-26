@@ -3,8 +3,8 @@
 arch ?= x86_64
 vm_prog ?= qemu-system-x86_64
 
-loop_dev_1 ?= /dev/loop3
-loop_dev_2 ?= /dev/loop4
+loop_dev_1 ?= /dev/loop6
+loop_dev_2 ?= /dev/loop7
 
 fat_bs ?= 512
 fat_num_blocks ?= 196575
@@ -106,6 +106,7 @@ $(fat): $(kernel) $(grub_cfg) $(fat_blank_img) $(is_superuser)
 	sudo echo "blaaaaaaaah" > /mnt/fatgrub/zzzzzzzzzzzzzz.txt
 	sudo echo "blaaaaaaaah" > /mnt/fatgrub/testing123.abc
 	sudo echo "blaaaaaaaah" > /mnt/fatgrub/AAAAAA.txt
+	sudo mkdir /mnt/fatgrub/test_dir
 	sudo echo "test" > /mnt/fatgrub/a.t
 	ls -l --full-time /mnt/fatgrub > fatgrub.ls
 	sudo umount /mnt/fatgrub

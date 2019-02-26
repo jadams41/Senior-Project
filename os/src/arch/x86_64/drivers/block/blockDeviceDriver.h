@@ -51,6 +51,8 @@ struct block_device_request {
 };
 
 typedef struct block_device_request block_device_request;
+typedef struct BlockDev BlockDev;
+typedef struct ATABlockDev ATABlockDev;
 
 typedef struct {
     uint8_t err:1;

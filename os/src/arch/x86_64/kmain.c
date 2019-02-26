@@ -12,7 +12,8 @@
 #include "drivers/ps2/keyboard.h"
 #include "drivers/block/blockDeviceDriver.h"
 #include "types/string.h"
-#include "drivers/block/fat32.h"
+#include "drivers/fs/vfs.h"
+#include "drivers/fs/fat32.h"
 
 extern void perform_syscall(int);
 extern void load_page_table(uint64_t);
@@ -122,40 +123,33 @@ void initBlockDevice(void *params){
     kexit();
 }
 
-void readBlock0(){
-    char dest[512], dest2[512];
-    memset(dest, 0, 512);
-    ata->read_block(ata, 2048, dest);
+/* void readBlock0(){ */
+/*     char dest[512], dest2[512]; */
+/*     memset(dest, 0, 512); */
+/*     ata->read_block(ata, 2048, dest); */
 
-    // printk("done reading block 0!\n");
-    // int i;
-    // for(i = 0; i < 512; i += 8){
-    //     printk("%d] %lx\n", i, *((uint64_t*)(dest + i)));
-    // }
+/*     ExtendedFatBootRecord *efbr = (ExtendedFatBootRecord*)dest; */
 
-    ExtendedFatBootRecord *efbr = (ExtendedFatBootRecord*)dest;
+/*     readBPB(&(efbr->bpb)); */
 
-    readBPB(&(efbr->bpb));
+/*     unsigned int root_dir_sector = get_root_directory_sector((ExtendedFatBootRecord*)dest); */
+/*     printk("root_dir_sector = %u\n", root_dir_sector); */
 
-    unsigned int root_dir_sector = get_root_directory_sector((ExtendedFatBootRecord*)dest);
-    printk("root_dir_sector = %u\n", root_dir_sector);
+/*     uint32_t fat_size = efbr->sectors_per_fat; */
+/*     uint64_t root_dir_sectors = 0; //0 on FAT32 */
+/*     uint64_t first_data_sector = efbr->bpb.num_reserved_sectors + (efbr->bpb.num_fats * fat_size) + root_dir_sectors; */
+/*     //uint64_t first_fat_sector = efbr->bpb.num_reserved_sectors; */
+/*     printk("first data sector = %lu\n", first_data_sector + 2048); */
 
-    uint32_t fat_size = efbr->sectors_per_fat;
-    uint64_t root_dir_sectors = 0; //0 on FAT32
-    uint64_t first_data_sector = efbr->bpb.num_reserved_sectors + (efbr->bpb.num_fats * fat_size) + root_dir_sectors;
-    //uint64_t first_fat_sector = efbr->bpb.num_reserved_sectors;
-    printk("first data sector = %lu\n", first_data_sector + 2048);
+/*     // read in the root dir block */
+/*     ata->read_block(ata,  first_data_sector + 2048, dest2); */
+/*     // parse entries in the root dir */
+/*     printk("--------- ROOT DIRECTORY ---------\n"); */
+/*     uint8_t *entry = (uint8_t*)dest2; */
+/*     read_directory(entry); */
+/*     kexit(); */
+/* } */
 
-    // read in the root dir block
-    ata->read_block(ata,  first_data_sector + 2048, dest2);
-    // parse entries in the root dir
-    printk("--------- ROOT DIRECTORY ---------\n");
-    uint8_t *entry = (uint8_t*)dest2;
-    read_directory(entry);
-    kexit();
-
-
-}
 void readBlock32(){
     char dest[512];
     memset(dest, 0, 512);
@@ -239,7 +233,9 @@ int kmain(void *multiboot_point, unsigned int multitest){
   uint64_t initBlockDeviceParams[5] = { 5, 0x1F0, 0x40, 0, 0x14};
   PROC_create_kthread(initBlockDevice, initBlockDeviceParams);
 
-  PROC_create_kthread(readBlock0, NULL);
+  uint64_t initFAT32Params[2] = {2, (uint64_t)ata};
+  PROC_create_kthread(initFAT32, initFAT32Params);
+  
   while(1){
       PROC_run();
       asm("hlt");

@@ -2,6 +2,22 @@
 #define FAT_32
 
 #include <stdint-gcc.h>
+#include "drivers/block/blockDeviceDriver.h"
+
+//FAT32 file attributes
+#define FAT_ATTR_READ_ONLY 0x01
+#define FAT_ATTR_HIDDEN 0x02
+#define FAT_ATTR_SYSTEM 0x04
+#define FAT_ATTR_VOLUME_ID 0x08
+#define FAT_ATTR_DIRECTORY 0x10
+#define FAT_ATTR_ARCHIVE 0x20
+
+// long file file name entry
+#define FAT_ATTR_LFN (FAT_ATTR_READ_ONLY | FAT_ATTR_HIDDEN | FAT_ATTR_SYSTEM | FAT_ATTR_VOLUME_ID)
+
+typedef struct {
+    SuperBlock super;
+} FAT32_SuperBlock;
 
 typedef struct {
     uint8_t inf_loop[3];
@@ -54,7 +70,6 @@ typedef struct {
     FAT32_FileTimeInfo time;
 }__attribute__((packed)) FAT32_FileCreationTime;
 
-
 // should be 2 bytes total
 typedef struct {
     uint8_t day:5;
@@ -97,7 +112,18 @@ typedef struct {
 }__attribute__((packed)) FAT32_LongEntry;
 
 
+// helper functions
 void readBPB(BPB *bpb);
 unsigned int get_root_directory_sector(ExtendedFatBootRecord *efbr);
-void read_directory(uint8_t *dir);
+
+// functions for general kernel use
+
+//todo replace this with fat32_probe
+void initFAT32(void *params);
+
+/* static  */SuperBlock *fat32_probe(BlockDev *dev);
+
+
+void read_directory_entry(uint8_t *dir);
+void read_directory(BlockDev *dev, uint64_t directory_block_num);
 #endif
