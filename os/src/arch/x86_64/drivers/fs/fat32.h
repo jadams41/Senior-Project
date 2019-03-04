@@ -4,6 +4,26 @@
 #include <stdint-gcc.h>
 #include "drivers/block/blockDeviceDriver.h"
 
+/*** STRUCTURE OF FAT32 PARTITION ***
+     __________________________________
+     |++++++++++++++++++++++++++++++++|
+     |+       RESERVED SECTORS       +|
+     |+++++++++++++++++++++++++++++++++
+     |           Boot Sector          |
+     |          FSInfo Sector         |
+     | More Reserved Sctrs (optional) |
+     |++++++++++++++++++++++++++++++++|
+     |+ FILE ALLOCATION TABLE REGION +|
+     |++++++++++++++++++++++++++++++++|
+     |    File Allocation Table #1    |
+     |        FAT #2 (optional)       |
+     |++++++++++++++++++++++++++++++++|
+     |+          DATA REGION         +|
+     |++++++++++++++++++++++++++++++++|
+     |           Data Sectors         |
+     |________________________________|
+ */
+
 //FAT32 file attributes
 #define FAT_ATTR_READ_ONLY 0x01
 #define FAT_ATTR_HIDDEN 0x02
@@ -15,9 +35,41 @@
 // long file file name entry
 #define FAT_ATTR_LFN (FAT_ATTR_READ_ONLY | FAT_ATTR_HIDDEN | FAT_ATTR_SYSTEM | FAT_ATTR_VOLUME_ID)
 
+/* classes extending the VFS classes */
 typedef struct {
     SuperBlock super;
+
+    /* information taken from bpb and efbr */
+    uint16_t bytes_per_sector;
+    uint8_t sectors_per_cluster;
+    uint16_t num_reserved_sectors;
+    uint8_t num_fats;
+    uint32_t first_fat_sector;
+    uint16_t sectors_per_fat;
+    
+    uint16_t fsinfo_sector_num;
+    
+    uint32_t total_sectors; //either total_sectors (16bit) or large_sector_count (32bit) if more than 2^16 sectors
+    uint32_t num_hidden_sectors;
+
+
+    /* information taken from FSInfo sector */
+    uint8_t fsinfo_valid; //(0,1): 1 if all signatures are valid otherwise 0
+    uint32_t last_known_free_clusters;
+    uint32_t last_allocated_data_cluster;
+    
+    /* other FS information */
+    uint64_t root_dir_sector;
+    uint64_t first_data_sector;
+    
 } FAT32_SuperBlock;
+
+typedef struct {
+    Inode inode;
+
+    // copy of FAT32 entry attributes
+    uint8_t attributes;
+} FAT32_Inode;
 
 typedef struct {
     uint8_t inf_loop[3];
@@ -26,7 +78,7 @@ typedef struct {
     uint8_t sectors_per_cluster;
     uint16_t num_reserved_sectors;
     uint8_t num_fats;
-    uint16_t num_dir_entries;
+    uint16_t num_dir_entries; // should be 0 on FAT32 (since directory clusters are normal data clusters)
     uint8_t total_sectors[2];
     uint8_t media_descriptor_type;
     uint16_t sectors_per_fat; //fat12/16 only
@@ -43,7 +95,7 @@ typedef struct {
     uint8_t fat_version_major;
     uint8_t fat_version_minor;
     uint32_t root_dir_cluster_num;
-    uint16_t fsinfo_sector_num;
+    uint16_t fsinfo_sector_num; //todo figure out if there is any useful information here
     uint16_t backup_boot_sector_num;
     uint8_t reserved[12];
     uint8_t drive_num;
@@ -55,6 +107,43 @@ typedef struct {
     uint8_t boot_code[420];
     uint16_t bootable_partition_sign; //0xAA55
 }__attribute__((packed)) ExtendedFatBootRecord;
+
+
+/* Note: information about this struct came from:
+ * https://infogalactic.com/info/Design_of_the_FAT_file_system#FS_Information_Sector 
+ */
+typedef struct {
+    uint8_t sig1; //should be 0x52
+    uint8_t sig2; //should be 0x52
+    uint8_t sig3; //should be 0x61
+    uint8_t sig4; //should be 0x41
+
+    uint8_t reserved[480];
+
+    uint8_t sig5; //should be 0x72
+    uint8_t sig6; //should be 0x72
+    uint8_t sig7; //should be 0x41
+    uint8_t sig8; //should be 0x61
+
+    /* Last known number of free data clusters on the volume.
+       0xFFFFFFFF if unknown.
+       Note: Before using, sanity check that this is <= volume's count of clusters */
+    uint32_t last_known_free_clusters;
+
+    /* Number of the most recently knwon to be allocated data cluster.
+       Should be set to 0xFFFFFFFF during format and updated by the operating system later on.
+       If 0xFFFFFFFF, system should start at cluster 0x00000002. 
+       Don't rely to be absolutely correct in all scenarios 
+       Note: Before using, sanity check this value to be a valid cluster number on the volume */
+    uint32_t last_allocated_data_cluster;
+
+    uint8_t reserved2[12];
+
+    uint8_t sig9;  //should be 0x00
+    uint8_t sig10; //should be 0x00
+    uint8_t sig11; //should be 0x55
+    uint8_t sig12; //should be 0xAA   
+}__attribute__((packed)) FAT32_FSInfo;
 
 // should be 2 bytes total
 typedef struct {
@@ -125,5 +214,7 @@ void initFAT32(void *params);
 
 
 void read_directory_entry(uint8_t *dir);
-void read_directory(BlockDev *dev, uint64_t directory_block_num);
+void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int first);
+
+ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur);
 #endif

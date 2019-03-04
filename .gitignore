@@ -1,6 +1,12 @@
 #all files in the build folder
 os/build
 os/build/*
+os/.cache
+os/.cache/*
+
+# all bazel build files
+*.bazel*
+WORKSPACE
 
 #all object files
 *.o

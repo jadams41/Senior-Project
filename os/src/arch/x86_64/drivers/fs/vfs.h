@@ -76,7 +76,7 @@ struct Inode {
 /* Generic File class
  * - A file opened for reading, writing, or both
  * - A file has an associated inode
- * - One iode can be opened multiple times concurrently */
+ * - One inode can be opened multiple times concurrently */
 struct File {
 
     /*** File Operations ***/
