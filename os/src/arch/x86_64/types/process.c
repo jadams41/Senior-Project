@@ -169,7 +169,7 @@ void PROC_unblock_all(ProcessQueue *pq){
 
 void PROC_unblock_head(ProcessQueue *pq){
     if(!pq->head){
-        printk_warn("Tried to unblock head of empty process queue\n");
+        /* printk_warn("Tried to unblock head of empty process queue\n"); */
         return;
     }
     if(!procListHead){

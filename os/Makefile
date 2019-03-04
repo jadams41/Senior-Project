@@ -103,44 +103,47 @@ $(fat): $(kernel) $(grub_cfg) $(fat_blank_img) $(is_superuser)
 	sudo mount $(loop_dev_2) /mnt/fatgrub
 	sudo grub-install --root-directory=/mnt/fatgrub --no-floppy --recheck --modules="normal part_msdos ext2 multiboot2" $(loop_dev_1)
 	sudo cp -r build/isofiles/* /mnt/fatgrub
-	sudo cp "test.txt" /mnt/fatgrub/test.txt
-	sudo cp "test.txt" /mnt/fatgrub/test2.txt
-	sudo cp "test.txt" /mnt/fatgrub/test3.txt
-	sudo cp "test.txt" /mnt/fatgrub/test4.txt
-	sudo cp "test.txt" /mnt/fatgrub/test5.txt
-	sudo cp "test.txt" /mnt/fatgrub/test6.txt
-	sudo cp "test.txt" /mnt/fatgrub/test7.txt
-	sudo cp "test.txt" /mnt/fatgrub/test8.txt
-	sudo cp "test.txt" /mnt/fatgrub/test9.txt
-	sudo cp "test.txt" /mnt/fatgrub/test10.txt
-	sudo cp "test.txt" /mnt/fatgrub/test11.txt
-	sudo cp "test.txt" /mnt/fatgrub/test12.txt
-	sudo cp "test.txt" /mnt/fatgrub/test13.txt
-	sudo cp "test.txt" /mnt/fatgrub/test14.txt
-	sudo cp "test.txt" /mnt/fatgrub/test15.txt
-	sudo cp "test.txt" /mnt/fatgrub/test16.txt
-	sudo cp "test.txt" /mnt/fatgrub/test17.txt
-	sudo cp "test.txt" /mnt/fatgrub/test18.txt
-	sudo cp "test.txt" /mnt/fatgrub/test19.txt
-	sudo cp "test.txt" /mnt/fatgrub/test20.txt
-	sudo cp "test.txt" /mnt/fatgrub/test21.txt
-	sudo cp "test.txt" /mnt/fatgrub/test22.txt
-	sudo cp "test.txt" /mnt/fatgrub/test23.txt
-	sudo cp "test.txt" /mnt/fatgrub/test24.txt
-	sudo cp "test.txt" /mnt/fatgrub/test25.txt
-	sudo cp "test.txt" /mnt/fatgrub/test26.txt
-	sudo cp "test.txt" /mnt/fatgrub/test27.txt
-	sudo cp "test.txt" /mnt/fatgrub/test28.txt
-	sudo cp "test.txt" /mnt/fatgrub/test29.txt
-	sudo cp "test.txt" /mnt/fatgrub/test30.txt
-	sudo cp "test.txt" /mnt/fatgrub/test31.txt
-	sudo cp "test.txt" /mnt/fatgrub/test32.txt
-	sudo echo "blaaaaaaaah" > /mnt/fatgrub/zzzzzzzzzzzzzz.txt
-	sudo echo "blaaaaaaaah" > /mnt/fatgrub/testing123.abc
-	sudo echo "blaaaaaaaah" > /mnt/fatgrub/AAAAAA.txt
-	sudo mkdir /mnt/fatgrub/test_dir
-	sudo echo "test" > /mnt/fatgrub/a.t
-	ls -l --full-time /mnt/fatgrub > fatgrub.ls
+	 sudo cp "test.txt" /mnt/fatgrub/thisisthetestfile.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test2.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test3.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test4.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test5.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test6.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test7.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test8.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test9.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test10.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test11.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test12.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test13.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test14.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test15.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test16.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test17.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test18.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test19.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test20.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test21.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test22.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test23.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test24.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test25.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test26.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test27.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test28.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test29.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test30.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test31.txt
+	# sudo cp "test.txt" /mnt/fatgrub/test32.txt
+	# sudo echo "blaaaaaaaah" > /mnt/fatgrub/zzzzzzzzzzzzzz.txt
+	# sudo echo "blaaaaaaaah" > /mnt/fatgrub/testing123.abc
+	sudo echo "Contents of the really long file" > /mnt/fatgrub/this_is_a_really_long_filename-HERE_ARE_SOME_CAPITAL_LETTERS.txt
+	# sudo echo "blaaaaaaaah" > /mnt/fatgrub/AAAAAA.txt
+	# sudo mkdir /mnt/fatgrub/test_dir
+	# sudo echo "test" > /mnt/fatgrub/a.t
+	#ls -l --full-time /mnt/fatgrub > fatgrub.ls
+	sudo echo "Hidden File contents" > /mnt/fatgrub/.my_hidden_file.txt
+	tree -a /mnt/fatgrub > fatgrub.tree
 	sudo umount /mnt/fatgrub
 	losetup -d $(loop_dev_1)
 	losetup -d $(loop_dev_2)

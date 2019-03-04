@@ -7,6 +7,10 @@
 #include "types/process.h"
 #include "drivers/memory/memoryManager.h"
 
+/* Outstanding TODOs
+ * - replace "+ 2048 - x" with better approach for reading sector numbers
+ * - make sure all sector information stored in the FAT32_SuperBlock struct is consistent (all same offsets) */
+
 /* struct FSImpl {
    FS_detect_cb probe;
    struct FSImpl *next;
@@ -194,13 +198,110 @@ uint8_t *read_long_entry(FAT32_LongEntry *le, int preceding_le){
 }
 
 /*
+ * todo: replace this with read_directory_entries
  * loops through entries in the directory block
  */
-void read_directory_entry(uint8_t *dir){
+/* void read_directory_entry(uint8_t *dir){ */
+/*     uint8_t *entry = dir; */
+/*     while((entry - dir) < 512) { */
+/* 	if(*entry == 0){ */
+/* 	    //printk("hit last entry\n"); */
+/* 	    break; */
+/* 	} */
+
+/* 	//not unused entry */
+/* 	if(*entry != 0xE5){ */
+/* 	    //check long entry */
+/* 	    if(entry[11] == 0x0F){ */
+/* 		entry = read_long_entry((FAT32_LongEntry*)entry, 0); */
+/* 	    } */
+/* 	    else { */
+/* 		entry = read_entry((FAT32_Entry*)entry, 0); */
+/* 	    } */
+/* 	} */
+/*     } */
+/* } */
+
+//buffer should be atleast 12 characters long (8 filename characters + '.' + 3 extension characters)
+int extract_filename_from_entry(FAT32_Entry *e, char *buffer){
+    int num_filename_chars_in_entry = 0, i;
+    char cur_char;
+    
+    //read the filename (first 8 chars)
+    for(i = 0; i < 8; i++){
+	cur_char = e->file_name[i];
+	if(cur_char == 0 || cur_char == ' '){
+	    break;
+	}
+	buffer[num_filename_chars_in_entry++] = cur_char;
+    }
+    
+    //check if there is an extension
+    if(!e->file_name[8] || e->file_name[8] == ' '){
+	return num_filename_chars_in_entry;
+    }
+
+    buffer[num_filename_chars_in_entry++] = '.';
+    for(i = 8; i < 11; i++){
+	cur_char = e->file_name[i];
+	if(cur_char == 0 || cur_char == ' '){
+	    break;
+	}
+	buffer[num_filename_chars_in_entry++] = cur_char;
+    }
+
+    return num_filename_chars_in_entry;
+}
+
+int extract_filename_from_long_entry(FAT32_LongEntry *le, char *buffer){
+    int num_filename_chars_in_le = 0, i;
+    char cur_char;
+    
+    if(le->long_entry_type != 0){
+	return 0;
+    }
+    //read first 5 characters in entry
+    for(i = 0; i < 10; i += 2){
+	if((cur_char = le->entry_chars1[i]) == 0){
+	    return num_filename_chars_in_le;
+	}
+	buffer[num_filename_chars_in_le++] = cur_char;
+    }
+    
+    //read next 6 characters in entry
+    for(i = 0; i < 12; i += 2){
+	if((cur_char = le->entry_chars2[i]) == 0){
+	    return num_filename_chars_in_le;
+	}
+	buffer[num_filename_chars_in_le++] = cur_char;
+    }
+    
+    //read last 2 characters in entry
+    for(i = 0; i < 4; i += 2){
+	if((cur_char = le->entry_chars3[i]) == 0){
+	    return num_filename_chars_in_le;
+	}
+	buffer[num_filename_chars_in_le++] = cur_char;
+    }
+
+    return num_filename_chars_in_le;
+}
+
+void read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *dir, int num_preceding_dirs, int last_entries_in_dir){
     uint8_t *entry = dir;
+    char filename_buffer[512]; //seems to be max filename length
+    int filename_buffer_is_populated = 0;
+
+    char filename_prefix[512];
+    int i;
+    for(i = 0; i < num_preceding_dirs * 2; i++){
+	filename_prefix[i] = ' ';
+    }
+    filename_prefix[i] = 0;
+    
     while((entry - dir) < 512) {
+	//break if reached the end of the listings in the directory
 	if(*entry == 0){
-	    //printk("hit last entry\n");
 	    break;
 	}
 
@@ -208,13 +309,84 @@ void read_directory_entry(uint8_t *dir){
 	if(*entry != 0xE5){
 	    //check long entry
 	    if(entry[11] == 0x0F){
-		entry = read_long_entry((FAT32_LongEntry*)entry, 0);
+		filename_buffer_is_populated = 1;
+		
+		FAT32_LongEntry *le = (FAT32_LongEntry*)entry;
+
+		uint8_t entry_order_num = le->entry_order & ENTRY_ORDER_NUMBER_MASK;
+		
+		int num_chars_read = extract_filename_from_long_entry(le, filename_buffer + (entry_order_num - 1) * 13);
+
+		//if last long entry, null terminate
+		if(le->entry_order & ENTRY_ORDER_LAST_LONG_ENTRY){
+		    filename_buffer[(entry_order_num - 1) * 13 + num_chars_read] = 0;
+		}
 	    }
 	    else {
-		entry = read_entry((FAT32_Entry*)entry, 0);
+		FAT32_Entry *e = (FAT32_Entry *)entry;
+		
+		if(filename_buffer_is_populated){
+		    printk("%s - %s", filename_prefix, filename_buffer);
+		    filename_buffer_is_populated = 0;
+		}
+		else {
+		    int num_chars_read = extract_filename_from_entry(e, filename_buffer);
+		    filename_buffer[num_chars_read] = 0;
+		    printk("%s - %s", filename_prefix, filename_buffer);
+		}
+
+		if(e->file_attributes & ENTRY_ATTR_SUBDIR){
+		    printk(" (directory)\n");
+
+		    //if not "dot entry" ('.' or '..'), read subdirectory
+		    if(e->file_name[0] != 0x2E){
+			//get cluster number of subdirectory
+			uint32_t cluster_num_of_subdir = (e->cluster_num_high16 << 16) + e->cluster_num_low16;
+			uint64_t sector_num_of_subdir = cluster_num_of_subdir * f32_sb->sectors_per_cluster + f32_sb->first_data_sector - 2 + 2048;
+			read_directory(dev, f32_sb, sector_num_of_subdir, num_preceding_dirs + 1);			
+		    }
+		}
+		else {
+		    printk("\n");
+		}
 	    }
+
 	}
+	
+	entry += sizeof(FAT32_Entry);
     }
+}
+
+void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int num_preceding_dirs){
+    char root_dir_block[512];
+
+    FAT32_Inode cur;
+    cur.inode.st_ino = directory_block_num - 2048 - f32_sb->first_data_sector + 2;
+    ino_t next_cluster = get_next_cluster(dev, f32_sb, &cur); //14464;//= get_next_cluster(dev, f32_sb, &cur);
+    
+    // read in the (first) root dir block
+    ata->read_block(ata,  directory_block_num, root_dir_block);
+
+    //read directory entries in current root directory block
+    uint8_t *entry = (uint8_t*)root_dir_block;
+    
+    read_directory_entries(dev, f32_sb, entry, num_preceding_dirs);
+    
+    if(next_cluster < 0x0FFFFFF8){
+	uint64_t next_sector = (next_cluster * f32_sb->sectors_per_cluster) + f32_sb->first_data_sector - 2 + 2048;
+	read_directory(dev, f32_sb, next_sector, num_preceding_dirs);
+    }
+    else {
+	/* printk("reached end of read_directory\n"); */
+    }
+}
+
+void traverse_and_display_entire_fs(BlockDev *dev, FAT32_SuperBlock *f32_sb){
+    ino_t root_dir_sector = f32_sb->root_dir_sector;
+    uint64_t root_dir_blocknum = root_dir_sector - 2 + f32_sb->first_data_sector + 2048;
+
+    printk("/\n");
+    read_directory(dev, f32_sb, root_dir_blocknum, 0);
 }
 
 /*
@@ -239,126 +411,6 @@ void initFAT32(void *params){
     fat32_probe(ata);
 
     kexit();
-}
-
-void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int first){
-    char root_dir_block[512];
-    
-    // read in the root dir block
-    ata->read_block(ata,  directory_block_num, root_dir_block);
-
-    // parse entries in the root dir
-    if(first){
-	printk("--------- ROOT DIRECTORY (blocknum=%u) ---------\n", directory_block_num);
-    }
-    uint8_t *entry = (uint8_t*)root_dir_block;
-    read_directory_entry(entry);
-
-    FAT32_Inode cur;
-    cur.inode.st_ino = directory_block_num - 2048 - f32_sb->first_data_sector + 2;
-    ino_t next_cluster = get_next_cluster(dev, f32_sb, &cur); //14464;//= get_next_cluster(dev, f32_sb, &cur);
-    
-    if(next_cluster < 0x0FFFFFF8){
-	uint64_t next_sector = (next_cluster * f32_sb->sectors_per_cluster) + f32_sb->first_data_sector - 2 + 2048;
-	read_directory(dev, f32_sb, next_sector, 0);
-    }
-}
-
-/* void create_dirent_inodes(BlockDev *dev, uint64_t dir_block_num, SuperBlock *parent_sb, Inode *parent){ */
-/*     char dir_block[512]; */
-/*     int i; */
-/*     uint8_t *entry; */
-
-/*     ata->read_block(ata, dir_block_num, dir_block); */
-/*     entry = (uint8_t*)dir_block; */
-
-/*     while(1) { */
-/* 	//if reached end of block, but still more entries, read next dir_block */
-/* 	if((entry - dir_block) >= 512){ */
-/* 	    //todo assuming directory blocks are sequentially placed on disk, modify if this is incorrect */
-/* 	    ata->read_block(ata, ++dir_block_num, dir_block); */
-/* 	    entry = (uint8_t*)dir_block; */
-/* 	} */
-
-/* 	//reached end of directory entries, done */
-/* 	if(*entry == 0){ */
-/* 	    break; */
-/* 	} */
-
-/* 	//not unused entry */
-/* 	if(*entry != 0xE5){ */
-/* 	    char *filename[256]; //256 seems to be the maximum file length on FAT32 */
-/* 	    int filename_len = 0, entry_filename_idx, done_reading_filename = 0; */
-
-/* 	    while(entry[11] == 0x0F){ */
-/* 		FAT32_LongEntry *le = (FAT32_LongEntry*)entry; */
-/* 		char c; */
-		
-/* 		//read first 5 characters in LE */
-/* 		for(entry_filename_idx = 0; entry_filename_idx < 10; entry_filename_idx += 2){ */
-/* 		    c = le->entry_chars1[entry_filename_idx]; */
-/* 		    filename[filename_len++] = c; */
-/* 		    if(c == 0){ */
-/* 			done_reading_filename = 1; */
-/* 		    } */
-/* 		} */
-
-/* 		//read next 6 characters in LE */
-/* 		for(entry_filename_idx = 0; !done_reading_filename && entry_filename_idx < 12; entry_filename_idx += 2){ */
-/* 		    c = le->entry_chars2[entry_filename_idx]; */
-/* 		    filename[filename_len++] = c; */
-/* 		    if(c == 0){ */
-/* 			done_reading_filename = 1; */
-/* 		    } */
-/* 		} */
-
-/* 		//read last 2 characters in LE */
-/* 		for(entry_filename_idx = 0; !done_reading_filename && entry_filename_idx < 4; entry_filename_idx += 2){ */
-/* 		    c = le->entry_chars2[entry_filename_idx]; */
-/* 		    filename[filename_len++] = c; */
-/* 		    if(c == 0){ */
-/* 			done_reading_filename = 1; */
-/* 		    } */
-/* 		} */
-
-/* 		//go to next entry */
-/* 		entry += sizeof(FAT32_LongEntry); */
-/* 	    } */
-
-/* 	    FAT32_Entry *e = (FAT32_Entry*)entry; */
-	    
-/* 	} */
-/*     } */
-/* } */
-
-/* Inode *recursively_read_fs(BlockDev *dev, uint64_t file_block_num, int file_attributes, int file_size, SuperBlock *parent_sb, Inode *parent){ */
-/*     Inode *inode = kmalloc(sizeof(Inode)); */
-/*     inode->parent_super = (SuperBlock*)sb; */
-
-/*     //if root_directory */
-/*     if(parent == NULL){ */
-/* 	inode->parent_inode = inode; */
-/*     } */
-    
-/*     inode->st_ino = file_block_num; */
-/*     inode->st_uid = 0; //todo figure out what to set this to */
-/*     inode->st_gid = 0; //todo figure out what to set this to */
-/*     inode->st_size = file_size; */
-    
-/*     if(block_is_dir){ */
-/* 	inode->st_mode = FILE_DIR; */
-/*     } */
-/*     else { */
-/* 	inode->st_mode = FILE_REGULAR */
-/*     } */
-/* } */
-
-uint32_t get_next_cluster_num(FAT32_SuperBlock *sb, uint32_t cur_cluster_num){
-    return 0;
-}
-
-void copy_file_allocation_table_into_sb(FAT32_SuperBlock *sb){
-    
 }
 
 int read_fs_info_sector(BlockDev *dev, FAT32_SuperBlock *sb){
@@ -757,7 +809,7 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
     ino_t next_ino = get_next_cluster(dev, f32_sb, root_inode);
     printk("root directory sector = %u, next sector = %lu\n", f32_sb->root_dir_sector, next_ino);
     
-    read_directory(dev, f32_sb, root_dir_sector - 2 + first_data_sector + 2048, 1);
+    traverse_and_display_entire_fs(dev, f32_sb);
     
     return (SuperBlock*)f32_sb;
 }

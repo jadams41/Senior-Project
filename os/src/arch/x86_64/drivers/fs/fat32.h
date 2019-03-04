@@ -189,6 +189,15 @@ typedef struct {
 
 }__attribute__((packed)) FAT32_Entry;
 
+#define ENTRY_ATTR_READ_ONLY 0x01
+#define ENTRY_ATTR_HIDDEN    0x02
+#define ENTRY_ATTR_SYSTEM    0x04
+#define ENTRY_ATTR_VOL_LABEL 0x08
+#define ENTRY_ATTR_SUBDIR    0x10
+#define ENTRY_ATTR_ARCHIVE   0x20
+#define ENTRY_ATTR_DEVICE    0x40
+#define ENTRY_ATTR_RESRVED   0x80
+
 typedef struct {
     uint8_t entry_order;
     char entry_chars1[10];
@@ -199,6 +208,9 @@ typedef struct {
     uint16_t zero; //always zero
     char entry_chars3[4];
 }__attribute__((packed)) FAT32_LongEntry;
+
+#define ENTRY_ORDER_NUMBER_MASK 0b011111
+#define ENTRY_ORDER_LAST_LONG_ENTRY 0x40
 
 
 // helper functions
@@ -214,7 +226,9 @@ void initFAT32(void *params);
 
 
 void read_directory_entry(uint8_t *dir);
-void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int first);
+
+void read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *directory_block_num, int num_preceding_dirs);
+void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int num_preceding_dirs);
 
 ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur);
 #endif
