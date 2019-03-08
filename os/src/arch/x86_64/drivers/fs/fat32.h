@@ -213,6 +213,12 @@ typedef struct {
 #define ENTRY_ORDER_LAST_LONG_ENTRY 0x40
 
 
+typedef struct FS_Entry {
+    char name[512];
+    struct FS_Entry *children;
+    struct FS_Entry *next;
+} FS_Entry;
+
 // helper functions
 void readBPB(BPB *bpb);
 unsigned int get_root_directory_sector(ExtendedFatBootRecord *efbr);
@@ -227,8 +233,8 @@ void initFAT32(void *params);
 
 void read_directory_entry(uint8_t *dir);
 
-void read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *directory_block_num, int num_preceding_dirs);
-void read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int num_preceding_dirs);
+FS_Entry *read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *directory_block_num, int num_preceding_dirs, FS_Entry **incomplete_prev, FS_Entry *prev_entries);
+FS_Entry *read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int num_preceding_dirs, FS_Entry **incomplete_prev, FS_Entry *prev_entries);
 
 ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur);
 #endif
