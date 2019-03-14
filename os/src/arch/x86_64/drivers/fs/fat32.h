@@ -35,6 +35,20 @@
 // long file file name entry
 #define FAT_ATTR_LFN (FAT_ATTR_READ_ONLY | FAT_ATTR_HIDDEN | FAT_ATTR_SYSTEM | FAT_ATTR_VOLUME_ID)
 
+#define FAT32_INITIAL_INODE_TABLE_LEN 100
+#define FAT32_NAME_MAX 255
+
+// struct used to store file descriptor table entries
+typedef struct FAT32_File {
+    File file;
+
+    
+
+    //todo add permissions and other relevant metadata
+} FAT32_File;
+
+typedef uint64_t FAT32_ClusterNum;
+
 /* classes extending the VFS classes */
 typedef struct {
     SuperBlock super;
@@ -52,7 +66,6 @@ typedef struct {
     uint32_t total_sectors; //either total_sectors (16bit) or large_sector_count (32bit) if more than 2^16 sectors
     uint32_t num_hidden_sectors;
 
-
     /* information taken from FSInfo sector */
     uint8_t fsinfo_valid; //(0,1): 1 if all signatures are valid otherwise 0
     uint32_t last_known_free_clusters;
@@ -61,9 +74,13 @@ typedef struct {
     /* other FS information */
     uint64_t root_dir_sector;
     uint64_t first_data_sector;
-    
+
 } FAT32_SuperBlock;
 
+
+/* since fat32 doesn't use inodes and linux skirts inodes for fat altogether, I'm using a different approach:
+   Inodes are simply used to keep track of the hierarchy of clusters */
+   
 typedef struct {
     Inode inode;
 
@@ -219,22 +236,31 @@ typedef struct FS_Entry {
     struct FS_Entry *next;
 } FS_Entry;
 
-// helper functions
-void readBPB(BPB *bpb);
-unsigned int get_root_directory_sector(ExtendedFatBootRecord *efbr);
 
-// functions for general kernel use
-
-//todo replace this with fat32_probe
-void initFAT32(void *params);
-
-/* static  */SuperBlock *fat32_probe(BlockDev *dev);
+/****** DEBUGGING FUNCTIONS ******/
+//print all relevant information from the supplied BPB
+void print_bpb(BPB *bpb);
+//print information stored in a fat32 file's date struct
+void print_fat_date(FAT32_FileDateInfo *d);
+//print information stored in a fat32 file's time struct
+void print_fat_time(FAT32_FileTimeInfo *t);
 
 
-void read_directory_entry(uint8_t *dir);
-
+/****** UTILITY FUNCTIONS ******/
 FS_Entry *read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *directory_block_num, int num_preceding_dirs, FS_Entry **incomplete_prev, FS_Entry *prev_entries);
 FS_Entry *read_directory(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint64_t directory_block_num, int num_preceding_dirs, FS_Entry **incomplete_prev, FS_Entry *prev_entries);
-
 ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur);
+
+
+/****** HELPER FUNCTIONS ******/
+//calculate the root directory sector number from the information stored in the Extended FAT Boot Record
+unsigned int get_root_directory_sector(ExtendedFatBootRecord *efbr);
+
+
+/****** FUNCTIONS FOR GENERAL KERNEL USE ******/
+//todo replace this with fat32_probe
+void initFAT32(void *params);
+//probes for a FAT32 FS on disk and if found, returns an initialized SuperBlock
+SuperBlock *fat32_probe(BlockDev *dev);
+
 #endif

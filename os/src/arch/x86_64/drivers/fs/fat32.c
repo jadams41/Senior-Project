@@ -20,7 +20,7 @@
 
 extern BlockDev *ata;
 
-void readBPB(BPB *bpb){
+void print_bpb(BPB *bpb){
     int i;
 
     printk("oemid='%s'\n", (char*)(bpb->oem_id));
@@ -299,7 +299,6 @@ void insert_FS_entry_into_entries(FS_Entry **root, FS_Entry *new_node){
     prev->next = new_node;
 }
 
-//returns linked list of FS_Entries
 FS_Entry *read_directory_entries(BlockDev *dev, FAT32_SuperBlock *f32_sb, uint8_t *dir, int num_preceding_dirs, FS_Entry **incomplete_prev, FS_Entry *prev_entries){
     uint8_t *entry = dir;
     int chars_in_filename_buffer = 0;
@@ -608,19 +607,7 @@ int read_fs_info_sector(BlockDev *dev, FAT32_SuperBlock *sb){
 }
 
 FAT32_Inode *create_inode(ino_t st_ino, mode_t st_mode, uid_t st_uid, gid_t st_gid, off_t st_size, uint8_t attrs){
-    FAT32_Inode *new_f32_inode = (FAT32_Inode*)kmalloc(sizeof(FAT32_Inode));
-    Inode *new_inode = &(new_f32_inode->inode);
-    
-    // set Inode attributes
-    new_inode->st_ino = st_ino;
-    new_inode->st_mode = st_mode;
-    new_inode->st_uid = st_uid;
-    new_inode->st_gid = st_gid;
-    new_inode->st_size = st_size;
-
-    new_f32_inode->attributes = attrs;
-
-    return new_f32_inode;
+    return NULL;
 }
 
 /* Verifies the information contained in the supplied FAT32 BPB
@@ -806,7 +793,6 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
 	printk_err("attempt to get next cluster for %u resulted in illegal File Allocation Table sector %u\n", cur_cluster_num, relevant_fat_sector_num);
     }
 
-
     ata->read_block(ata, relevant_fat_sector_num, fat_sector);
 
     next_ino = fat_sector[cur_cluster_num % (num_entries_per_fat_sector)];
@@ -815,6 +801,31 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
 
     return next_ino;
 }
+
+/* Inode *read_inode(SuperBlock *sb, unsigned long inode_num){ */
+/*     //know this was called from a FAT32SuperBlock, so convert sb to FAT32_SuperBlock */
+/*     FAT32_SuperBlock *f32_sb = (FAT32_SuperBlock*)sb; */
+
+/*     FAT32_Inode *new_f32_inode = (FAT32_Inode*)kmalloc(sizeof(FAT32_Inode)); */
+/*     Inode *new_inode = &(new_f32_inode->inode); */
+
+/*     uint64_t new_inode_num = f32_sb->next_inode_number++; */
+    
+/*     // set Inode attributes */
+/*     new_inode->st_ino = new_inode_number; */
+/*     new_inode->st_mode = 0; */
+/*     new_inode->st_uid = 0; */
+/*     new_inode->st_gid = 0; */
+/*     new_inode->st_size = 0; */
+
+/*     return new_f32_inode; */
+    
+/*     //inode we will return */
+/*     FAT32_Inode *new_inode = (FAT32_Inode*)kmalloc(sizeof(FAT32_Inode)); */
+    
+    
+/*     return &(new_inode->inode); */
+/* } */
 
 /* static */SuperBlock *fat32_probe(BlockDev *dev){
     char efbr_block[512];
@@ -837,7 +848,7 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
 	return NULL;
     }
     
-    readBPB(&(efbr->bpb));
+    print_bpb(&(efbr->bpb));
 
     root_dir_sector = get_root_directory_sector((ExtendedFatBootRecord*)efbr_block);
 
@@ -853,7 +864,6 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
     f32_sb->first_fat_sector = f32_sb->num_reserved_sectors + 2048; //wiki.osdev.org/FAT
     f32_sb->sectors_per_fat = efbr->sectors_per_fat;
 
-    
     f32_sb->fsinfo_sector_num = efbr->fsinfo_sector_num;
 
     total_sectors = *((uint16_t*)efbr->bpb.total_sectors);
@@ -867,17 +877,17 @@ ino_t get_next_cluster(BlockDev *dev, FAT32_SuperBlock *f32_sb, FAT32_Inode *cur
 
     read_fs_info_sector(dev, f32_sb);
 
+    
     //create inode for the root directory
     root_inode = create_inode(root_dir_sector, 0, 0, 0, 0, 0);
     f32_sb->super.root_inode = (Inode*)root_inode;
     
+    
     //set superblock functions
-    //todo
-
+    f32_sb->super.read_inode = NULL;
+	
     ino_t next_ino = get_next_cluster(dev, f32_sb, root_inode);
     printk("root directory sector = %u, next sector = %lu\n", f32_sb->root_dir_sector, next_ino);
-    
-    traverse_and_display_entire_fs(dev, f32_sb);
     
     return (SuperBlock*)f32_sb;
 }
