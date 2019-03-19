@@ -182,10 +182,11 @@ static int populate_pf_list(){
     return 0;
 }
 
-int count = 0;
+
 //will attempt to grab a page frame off of the page frame list
 //then will add a
 void *MMU_pf_alloc(){
+    static int count = 0;
     memory_info *info = &memInfo;
     int err;
     if(info->free_frames_list == 0){
@@ -361,16 +362,16 @@ void *init_page_table(){
     return p4_table;
 }
 
-//check the available bits in the entry
-//if any of them are set assume that the memory is set,
-//else assume that it is free
-// static int PTE_free(uint64_t pte){
-//     return (pte & 0b111000000011) == 0;
-// }
 
+/**
+ * allocates a new page frame and returns the virtual address of the first page. 
+ * Note - unless the physical address is requested, this address will not be paged into memory until it is accessed for the first time and a page fault is generated. 
+ * @phys_addr - if this value is not null, it indicates that the physical address is requested for the virtual address 
+ *              (resulting in the page being immediately paged into memory) and the address being stored using this pointer. 
+ */
 uint64_t user_p4_idx = 16, user_p3_idx = 0, user_p2_idx = 0, user_p1_idx = 0;
 uint64_t p4_idx = 15, p3_idx = 0, p2_idx = 0, p1_idx = 0;
-void *MMU_alloc_page(){
+void *MMU_alloc_page(uint32_t *phys_addr){
     store_control_registers();
     uint64_t cr3 = saved_cr3;
     uint64_t *table_accessor = (uint64_t*)cr3, *p3_access, *p2_access, *p1_access;
@@ -407,7 +408,24 @@ void *MMU_alloc_page(){
     else {
         p1_access = strip_present_bits(p1_access); //remove the 0b11 from the entry so that it is a valid address
     }
-    p1_access[p1_idx] |= 0b1000000000;
+    if(!phys_addr){
+	p1_access[p1_idx] |= 0b1000000000;
+    }
+    else {
+	void *newPage = MMU_pf_alloc();
+	if(newPage == 0){
+	    printk_err("couldn't get physical page when allocating a virtual page and immediately paging in\n");
+	    asm("hlt");
+	}
+	uint64_t pg = (uint64_t)newPage;
+	if((pg & 0xFFFFFFFF00000000) != 0){
+	    printk_err("this didn't work as expected... (pg = %lx)\n", pg);
+	}
+	*phys_addr = (uint32_t)(pg & 0xFFFFFFFF);
+        pg |= 0b11;
+	p1_access[p1_idx] = pg;
+	zero_out_page(newPage);
+    }
     uint64_t retAddr = p4_idx;
     retAddr <<= 39; //index of the kernel heap in p4
     retAddr |= p3_idx << 30; //index of this page in the p3 table
@@ -429,21 +447,36 @@ void *MMU_alloc_page(){
     return 0;
 }
 
-void *MMU_alloc_pages(int num){
+/**
+ * allocates specified number of contiguous new pages and returns the virtual address of the first page
+ * @phys_addrs - if this value is not null it is assumed to be a uint64_t array of size num, which will
+ *              be used to hold the values of the physical memory addresses for the alloc'd pages.
+ */
+void *MMU_alloc_pages(int num, uint32_t *phys_addrs){
     if(num <= 0){
         printk_err("invalid number of pages to allocate, nothing will happen\n");
         return 0;
     }
     int i;
-    void *toRet;
-    void *pg = toRet = MMU_alloc_page();
+    void *toRet, *pg;
+    if(phys_addrs){
+	pg = toRet = MMU_alloc_page(phys_addrs);
+    }
+    else{
+	pg = toRet = MMU_alloc_page(NULL);
+    }
 
     for(i = 1; i < num; i++){
         if(pg == 0){
             printk_warn("ran out of memory while trying to allocate multiple pages. Only allocated %d pages\n", i - 1);
             break;
         }
-        pg = MMU_alloc_page();
+	if(phys_addrs){
+	    pg = MMU_alloc_page(phys_addrs + i);
+	}
+	else {
+	    pg = MMU_alloc_page(NULL);
+	}
     }
     return toRet;
 }
@@ -459,7 +492,7 @@ void *MMU_alloc_user_page(){
     p2_idx = user_p2_idx;
     p1_idx = user_p1_idx;
 
-    void *toRet = MMU_alloc_page();
+    void *toRet = MMU_alloc_page(NULL);
 
     user_p4_idx = p4_idx;
     user_p3_idx = p3_idx;
@@ -485,7 +518,7 @@ void *MMU_alloc_user_pages(int num){
     p2_idx = user_p2_idx;
     p1_idx = user_p1_idx;
 
-    void *toRet = MMU_alloc_pages(num);
+    void *toRet = MMU_alloc_pages(num, NULL);
 
     user_p4_idx = p4_idx;
     user_p3_idx = p3_idx;
@@ -556,6 +589,7 @@ KmallocPool pool128 =  {128,  0, (FreeList*)0};
 KmallocPool pool512 =  {512,  0, (FreeList*)0};
 KmallocPool pool1024 = {1024, 0, (FreeList*)0};
 KmallocPool pool2048 = {2048, 0, (FreeList*)0};
+KmallocPool pool4096 = {4096, 0, (FreeList*)0};
 
 static void pushBlockToPoolStack(KmallocPool *pool, FreeList *block){
     //LIFO linked list
@@ -575,7 +609,7 @@ static int addBlocksToPool(KmallocPool* pool, int numPagesToChopUp){
     void *pageForBlocks, *curBlockPos;
     int i, counter = 0, numBlocksPerPage = 4096 / pool->max_size;
 
-    pageForBlocks = MMU_alloc_page();
+    pageForBlocks = MMU_alloc_page(NULL);
     if(pageForBlocks == 0){
         return 0;
     }
@@ -648,8 +682,19 @@ void kfree(void *addr){
         pushBlockToPoolStack(p, (FreeList*)extra);
         return;
     }
+    if(p == &pool4096){
+	int full_size = extra->size + sizeof(KmallocExtra);
+	
+	int num_pages = full_size / 4096;
+	if(full_size % 4096){
+	    num_pages += 1;
+	}
 
-    printk_err("attempted to free memory that didn't even seem to be allocated, fuck you\n");
+	MMU_free_pages(extra, num_pages);
+	return;
+    }
+
+    printk_err("attempted to free memory that didn't even seem to be allocated\n");
 }
 
 //NOTE todo - determine whether or not the size inside of the extra is the size of the block or the size that was requested to be allocated
@@ -685,8 +730,15 @@ void *kmalloc(size_t size){
         fittingPool = &pool2048;
     }
     else {
-        printk_err("tried to allocate too big of a chunk of memory, max is 2032\n");
-        return (void *)0;
+	int pages_needed = size_w_extra / 4096;
+	if(size_w_extra % 4096){
+	    pages_needed += 1;
+	}
+	extra = (KmallocExtra*)MMU_alloc_pages(pages_needed, NULL);
+	extra->pool = &pool4096;
+	extra->size = size;
+
+	return ((void*)extra) + sizeof(KmallocExtra);
     }
 
     //if we made it here, the fitting pool should be set
@@ -700,4 +752,43 @@ void *kmalloc(size_t size){
 
     //return a pointer to the inside of the block past the extra
     return ((void*)allocatedBlock) + sizeof(KmallocExtra);
+}
+
+/**
+ * allocates memory suitable for dma access and returns virtual address
+ * of first page allocated (also returns physical address of the first page allocated
+ * via the phys_addrs parameter).
+ * @param size - the number of bytes needed to allocated
+ * @param phys_addr - pointer to a uint32_t which will contain the physical address underlying the
+ *                    first allocated page upon return
+ * @return virtual memory address of first allocated page 
+*/
+void *alloc_dma_coherent(size_t size, uint32_t *phys_addr){
+    size_t size_w_extra = size + sizeof(KmallocExtra);
+    KmallocExtra *extra;
+    
+    if(phys_addr == NULL){
+	printk_err("Alloc_dma_coherent needs a valid pointer store the physical address of allocated pages\n");
+	asm("hlt");
+    }
+    
+    int pages_needed = size_w_extra / 4096;
+    if(size_w_extra % 4096){
+	pages_needed += 1;
+    }
+    uint32_t *phys_addrs = (uint32_t*)kmalloc(sizeof(uint32_t*) * pages_needed);
+
+    extra = (KmallocExtra*)MMU_alloc_pages(pages_needed, phys_addrs);
+    extra->pool = &pool4096;
+    extra->size = size;
+
+    printk("allocated %d 4K dma pages\n", pages_needed);
+    int i;
+    for(i = 0; i < pages_needed; i++){
+	uint32_t page_phys_addr = phys_addrs[i];
+	printk("page %d: virt=0x%x, phys=0x%x\n", i, ((uint64_t)extra) + 4096 * i, page_phys_addr); 
+    }
+
+    *phys_addr = phys_addrs[0];
+    return ((void*)extra) + sizeof(KmallocExtra);
 }

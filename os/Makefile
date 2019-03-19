@@ -66,10 +66,10 @@ clean:
 
 
 run: $(iso)
-	sudo $(vm_prog) -machine ubuntu -s -cdrom $(iso) -serial stdio
+	sudo $(vm_prog) -machine ubuntu -s -cdrom $(iso) -serial stdio -net nic,model=rtl8319
 
 runf: $(fat)
-	@sudo $(vm_prog) -machine ubuntu -s -drive format=raw,file=$(fat) -serial stdio
+	@sudo $(vm_prog) -machine ubuntu -s -drive format=raw,file=$(fat) -serial stdio -net nic,model=rtl8139
 
 runb: $(iso)
 	@bochs -q
@@ -103,7 +103,7 @@ $(fat): $(kernel) $(grub_cfg) $(fat_blank_img) $(is_superuser)
 	sudo mount $(loop_dev_2) /mnt/fatgrub
 	sudo grub-install --root-directory=/mnt/fatgrub --no-floppy --recheck --modules="normal part_msdos ext2 multiboot2" $(loop_dev_1)
 	sudo cp -r build/isofiles/* /mnt/fatgrub
-	 sudo cp "test.txt" /mnt/fatgrub/thisisthetestfile.txt
+	#sudo cp "test.txt" /mnt/fatgrub/thisisthetestfile.txt
 	# sudo cp "test.txt" /mnt/fatgrub/test2.txt
 	# sudo cp "test.txt" /mnt/fatgrub/test3.txt
 	# sudo cp "test.txt" /mnt/fatgrub/test4.txt

@@ -14,6 +14,8 @@
 #include "types/string.h"
 #include "drivers/fs/vfs.h"
 #include "drivers/fs/fat32.h"
+#include "drivers/pci/pci.h"
+#include "drivers/net/8139too.h"
 
 extern void perform_syscall(int);
 extern void load_page_table(uint64_t);
@@ -25,6 +27,7 @@ extern uint64_t vga_buf_cur;
 int stupidFunctionDead = 0;
 extern PROC_context *curProc;
 struct BlockDev *ata = 0;
+struct PCIDevice *pci_devices = NULL;
 
 //takes params void *blockBuffer, uint64_t blockNumber
 void printBlock(void *params){
@@ -150,6 +153,31 @@ void initBlockDevice(void *params){
 /*     kexit(); */
 /* } */
 
+int init_pci_devices(){
+    int num_devices_initd = 0;
+    PCIDevice *cur = pci_devices;
+
+    while(cur){
+	printk("dev vendor = 0x%x\n", cur->vendor_id);
+	switch(cur->vendor_id){
+	case 0x10ec:
+	    printk("found a realtek device\n");
+	    switch(cur->device_id){
+	    case 0x8139:
+	        if(!init_rt8139(cur)){
+		    num_devices_initd += 1;
+		}
+		break;
+	    }
+	    
+	    break;
+	}
+	cur = cur->next_device;
+    }
+
+    return num_devices_initd;
+}
+
 void readBlock32(){
     char dest[512];
     memset(dest, 0, 512);
@@ -221,20 +249,22 @@ int kmain(void *multiboot_point, unsigned int multitest){
   load_page_table((uint64_t)new_page_table);
 
   init_kheap();
+  ata = ata_probe(0x1F0, 0x40, 0, 0x14);
 
-  // PROC_create_kthread((kproc_t)grabKeyboardInput, (void *)0);
-  // PROC_create_kthread((kproc_t)stupidFunction, (void *)0);
-
-  // setup_snakes(1);
+  int num_pci_devs = pci_probe(&pci_devices);
+  printk("%d pci devices found\n", num_pci_devs);
 
   int enabled = 0;
   while(!enabled);
-
-  uint64_t initBlockDeviceParams[5] = { 5, 0x1F0, 0x40, 0, 0x14};
-  PROC_create_kthread(initBlockDevice, initBlockDeviceParams);
+  
+  if(num_pci_devs){
+      init_pci_devices();
+  }
 
   uint64_t initFAT32Params[2] = {2, (uint64_t)ata};
   PROC_create_kthread(initFAT32, initFAT32Params);
+	
+  
   
   while(1){
       PROC_run();

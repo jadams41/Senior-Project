@@ -57,8 +57,8 @@ void MMU_pf_free(void *pf);
 void zero_out_page(void *pf);
 
 void *init_page_table();
-void *MMU_alloc_page();
-void *MMU_alloc_pages(int);
+void *MMU_alloc_page(uint32_t *phys_addr);
+void *MMU_alloc_pages(int, uint32_t *phys_addrs);
 void *MMU_alloc_user_page();
 void *MMU_alloc_user_pages(int);
 
@@ -69,6 +69,8 @@ void init_kheap();
 
 void *kmalloc(size_t);
 void kfree(void*);
+
+void *alloc_dma_coherent(size_t size, uint32_t *phys_addr);
 
 struct FreeList {
     struct FreeList *next;

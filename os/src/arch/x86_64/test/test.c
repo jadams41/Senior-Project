@@ -98,7 +98,7 @@ void virtual_page_frame_test(){
 
     //allocate virtual pages
     for(i = 0; i < 10; i++){
-        vpages[i] = MMU_alloc_page();
+        vpages[i] = MMU_alloc_page(NULL);
 
         printk("page %d is at %lx\n", i, vpages[i]);
     }
@@ -140,7 +140,7 @@ void virtual_page_frame_test(){
     int count = 0;
     void *vpage;
     while(1){
-        vpage = MMU_alloc_page();
+        vpage = MMU_alloc_page(NULL);
         if(vpage == 0) break;
         count++;
     }
