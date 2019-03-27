@@ -36,6 +36,7 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
   2. **Set up Project**
       - [X] Create GitHub Repository for Documenting project information
       - [X] Populate project's `README` with initial information regarding project background, scope & objectives, and tentative timeline of critical work.
+---------
 
 #### Milestone 1: *Necessary Maintenance and Preparations for New Development*
 
@@ -52,7 +53,8 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
       - [X] Review and document initial project's accomplishment of milestones.
       - [X] Fix all partially implemented functionality milestones.
       - [ ] Implement remaining non-attempted milestones.
-    
+---------
+
 #### Milestone 2: *Implementation of Network Stack*
   1. **Develop Peripheral Component Interconnect (`PCI`) driver _(Needed to discover, configure, and interact with Network Interface Card)_**
       - [X] Research and document relevant PCI functionality and control.
@@ -76,6 +78,8 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
          - [ ] TEST: Guest VM sends ethernet frame to host:
             - [ ] Verify that ethernet frame sent from guest is received on the host VM.
             - [ ] Verify that frame's header information and data are consistent (when received on host).
+---------
+
 #### _Potential Future Milestones_
   1. Implement better graphics support.
   2. Improve process control capabilities.
