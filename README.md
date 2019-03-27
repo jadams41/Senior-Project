@@ -38,21 +38,17 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
       - [X] Populate project's `README` with initial information regarding project background, scope & objectives, and tentative timeline of critical work.
 
 #### Milestone 1: *Necessary Maintenance and Preparations for New Development*
+
   1. **Revise previous work.**
-  
       - [X] Review all of previous work - make sure functionality and limitations are understood and documented.
       - [X] Fix identified erroneous/limited implementation.
-    
   2. **Create a more robust and stable development environment.**
-  
       - [X] Review and document functionality of current build system (make).
       - [ ] Migrate build of project (operating system) to use `bazel`. **Ignoring this for now**
       - [X] Document how to build and run project with new build system.
       - [ ] Research, implement, and document project testing strategy.
       - [ ] _Explore possibility of migrating project from `C` to `C++`._
-    
   3. **Complete all `cpe454` functionality milestones**
-
       - [X] Review and document initial project's accomplishment of milestones.
       - [X] Fix all partially implemented functionality milestones.
       - [ ] Implement remaining non-attempted milestones.
