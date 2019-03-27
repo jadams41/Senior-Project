@@ -29,21 +29,21 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
 ### Milestones
 #### Milestone 0: *Set up Senior Project and Document Project Scope*
 
-  1. Take care of administrative tasks for setting up Senior Project
+  1. **Take care of administrative tasks for setting up Senior Project**
       - [X] Create project proposal documenting scope and objectives.
       - [X] Procure project advisor.
       - [X] Submit Pre-Enrollment Proposal to officially enroll in Senior Project I.
-  2. Set up Project
+  2. **Set up Project**
       - [X] Create GitHub Repository for Documenting project information
       - [X] Populate project's `README` with initial information regarding project background, scope & objectives, and tentative timeline of critical work.
 
 #### Milestone 1: *Necessary Maintenance and Preparations for New Development*
-  1. Revise previous work
+  1. **Revise previous work.**
   
       - [X] Review all of previous work - make sure functionality and limitations are understood and documented.
       - [X] Fix identified erroneous/limited implementation.
     
-  2. Create a more robust and stable development environment.
+  2. **Create a more robust and stable development environment.**
   
       - [X] Review and document functionality of current build system (make).
       - [ ] Migrate build of project (operating system) to use `bazel`. **Ignoring this for now**
@@ -51,21 +51,21 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
       - [ ] Research, implement, and document project testing strategy.
       - [ ] _Explore possibility of migrating project from `C` to `C++`._
     
-  3. Complete all `cpe454` functionality milestones
+  3. **Complete all `cpe454` functionality milestones**
 
       - [X] Review and document initial project's accomplishment of milestones.
       - [X] Fix all partially implemented functionality milestones.
       - [ ] Implement remaining non-attempted milestones.
     
 #### Milestone 2: *Implementation of Network Stack*
-  1. Develop Peripheral Component Interconnect (`PCI`) driver *(Needed to discover, configure, and interact with Network Interface Card)*
+  1. **Develop Peripheral Component Interconnect (`PCI`) driver _(Needed to discover, configure, and interact with Network Interface Card)_**
       - [X] Research and document relevant PCI functionality and control.
       - [X] Implement basic PCI driver (capable of reading from and writing to PCI configuration space).
       - [X] Implement `pci_probe` (discovery and handling of all devices connected to PCI bus):
          - [X] Detect all devices connected to the PCI bus.
          - [X] Develop super structure to represent PCI device (`PCIDevice`) with child structures to handle different types of PCI devices. Access to PCI control should be handled through function pointers set in super `PCIDevice` structure.
          - [X] Integrate functionality: discover all connected devices, store relevant information in `PCIDevice`s, return list of discovered `PCIDevice`s.
-  2. Implement Network Interface Card (`NIC`) driver
+  2. **Implement Network Interface Card (`NIC`) driver**
       - [X] Research and document different NIC models.
       - [X] Choose initial NIC to develop driver for and document rationale.
       - [ ] Implement primitive driver functionality:
