@@ -78,6 +78,11 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
          - [ ] TEST: Guest VM sends ethernet frame to host:
             - [ ] Verify that ethernet frame sent from guest is received on the host VM.
             - [ ] Verify that frame's header information and data are consistent (when received on host).
+  3. **Build Network Stack**
+      - [ ] Layer 1: NIC configured and functions when interacting physically.
+      - [ ] Layer 2: Send and receive ethernet frames on local subnet.
+      - [ ] Layer 3: Send and receive IP packets across networks.
+      - [ ] Layer 4: Communicate with remote device via TCP.
 ---------
 
 #### _Potential Future Milestones_
