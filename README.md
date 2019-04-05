@@ -1,7 +1,7 @@
 This is the repository containing my work on Senior Project at Cal Poly.
 
 ## Project Information
-__Author:__ J. Ethan Adams (jadams30@calpoly.edu)
+__Author:__ J. Ethan Adams (jadams30@calpoly.edu, j.ethan.adams@gmail.com)
 
 __Project Advisor:__ Dr. John Bellardo (http://users.csc.calpoly.edu/~bellardo/index.php)
 
@@ -21,6 +21,33 @@ The goal of this to develop a custom, functional `x86_64` *unix-like* Operating 
 3. OS can be built for physical hardware targets. All implemented OS features will be supported and verifiably functional for each supported hardware target.
 
 _NOTE: more objectives will likely be added once `Objective 2` has been accomplished._
+
+#### Current Functionality
+1. Kernel Boot Procedure (assembly):
+   1. Create stack and store in `esp` register
+   2. Test for Multiboot-compliant bootloader and store Multiboot Information Structure pointer
+   3. Check for `CPUID` and Long Mode availability
+   4. Create initial page tables and enable paging
+   5. Enter Long Mode
+   6. Call `kmain` with stored multiboot information
+2. Initailize VGA buffer and basic VGA output capability
+3. Initialize PS/2 driver to handle keyboard input
+4. Enable Interrupts
+   1. Initialize Programmable Interrupt Controller and enable cascading between master and slave PICs. Mask all interrupts.
+   2. Initialize `idt` and load with `lidt`.
+   3. Initialize `ist`(most interrupts use the general interrupt stack while GPF, DF, PF, and Syscalls are given unique interrupt stacks).
+   4. Unmask and install ISRs for PS/2, Serial, DF, ATA, GPF, PF, and Syscall interrupts.
+5. Configure Serial Communication Driver (connected to host machine for debugging purposes). All following kernel output will be printed to VGA buffer and sent to host.
+6. Process Multiboot tags and extract relevant information (memory map and elf sybmol tags).
+7. Create new 4 level page table and initialize set up virtual memory (and dynamic memory allocation).
+   1. Kernel Heap is initalized.
+   2. Allocated virtual memory is paged "on demand" (no physical page used for an allocated virtual page until memory is accessed and page fault is raised).
+8. Probe for ATA devices and initialize if found.
+   1. Probe for filesystems on each found device and represent each as "Virtual Filesystem".
+9. Probe for PCI devices and initialize if found.
+   1. *Currently only focused on initializing rtl8139 NIC*
+10. Initialize found Network Interface Controller.
+   1. Process and modify relevant information stored in PCI configuration space.
 
 ---------
 
