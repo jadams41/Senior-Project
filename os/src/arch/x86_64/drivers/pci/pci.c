@@ -3,13 +3,13 @@
 #include "utils/printk.h"
 #include "utils/utils.h"
 #include "drivers/memory/memoryManager.h"
+#include "drivers/pci/vendors.h"
 
 uint32_t pci_config_read_field(uint8_t bus, uint8_t slot, uint8_t func, uint8_t field_offset, uint8_t field_size){
     uint32_t address;
     uint32_t lbus = (uint32_t)bus;
     uint32_t lslot = (uint32_t)slot;
     uint32_t lfunc = (uint32_t)func;
-    //uint32_t full_register = 0;
 
     if(((field_offset % 4) + field_size) > 4){
 	return 0;
@@ -30,7 +30,11 @@ uint32_t pci_config_read_field(uint8_t bus, uint8_t slot, uint8_t func, uint8_t 
     else if(field_size == 4){
 	return inl(0xCFC);
     }
-
+    else {
+	printk_err("bad usage, field size %d is not allowed\n", field_size);
+	asm("hlt");
+    }
+    
     return 0;
 }
 
@@ -46,28 +50,114 @@ uint32_t pci_config_write_field(uint8_t bus, uint8_t slot, uint8_t func, uint8_t
     outl(0xCF8, address);
 
     if(value_len == 1){
-	outb((uint8_t)value, 0xCFC + (field_offset & 3));
+	outb(0xCFC + (field_offset & 3), (uint8_t)value);
     }
     else if(value_len == 2){
-	outw((uint16_t)value, 0xCFC + (field_offset & 2));
+	outw(0xCFC + (field_offset & 2), (uint16_t)value);
     }
     else if(value_len == 4){
-	outl((uint32_t)value, 0xCFC);
+	outl(0xCFC, (uint32_t)value);
+    }
+    else {
+	printk_err("bad usage, value_len %d is not allowed\n", value_len);
+	asm("hlt");
     }
     
     return 0;
 }
 
-void add_bar_to_device(uint32_t bar, PCIDevice *dev){
-    if(bar & 0b1){
-	uint32_t base_addr = (bar & 0xFFFFFFFC);
+/**
+ * Determine the amount of address space required for the bar
+ * Follows PCI 2.2 Implementation Note: Sizing a 32 bit Base Address Register:
+ *   1) Decode of a register is disabled via the command register before sizing
+ *   2) Save the original value of BARX register
+ *   3) Write all 1s to BARX register (0xFFFFFFFF)
+ *   4) Read back BARX register
+ *      a) clear encoding information bits (bit 0 for I/O, bits 0-3 for Mem)
+ *      b) invert all bits
+ *      c) increment by 1
+ *   5) Write back original value 
+ *   6) Reenable decode in command register */
+uint32_t decode_bar(uint32_t bar_val, uint32_t bar_offset, PCIDevice *dev){
+    uint32_t all_1s = 0xFFFFFFFF;
+    uint16_t cmd = pci_config_read_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, 2);
+    uint32_t mem_needed;
+
+    /* I/O bar type */
+    if(bar_val & 0b1){
+	/* disable I/O register decode (cmd register bit 0) */
+	cmd &= 0xFFFE;
+	pci_config_write_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, cmd, 2);
+
+	/* write all 1s to BARX register */
+	pci_config_write_field(dev->bus, dev->slot, dev->func, bar_offset, all_1s, 4);
+
+	/* read back BARX */
+	mem_needed = pci_config_read_field(dev->bus, dev->slot, dev->func, bar_offset, 4);
+	
+	/* calculate mem_needed */
+	// clear all encoding information bits (bit 0 for I/O)
+	mem_needed &= 0xFFFFFFFE;
+	// invert all bits
+	mem_needed = ~mem_needed;
+	//increment by 1
+	mem_needed += 1;
+
+	/* write back original value */
+	pci_config_write_field(dev->bus, dev->slot, dev->func, bar_offset, bar_val, 4);
+
+	/* reenable I/O register decode (cmd register bit 0) */
+	cmd |= 0b1;
+        pci_config_write_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, cmd, 2);
+    }
+    /* Mem bar type */
+    else {
+	/* disable Mem register decode (cmd register bit 1) */
+	cmd &= 0xFFFE;
+	pci_config_write_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, cmd, 2);
+
+	/* write all 1s to BARX register */
+	pci_config_write_field(dev->bus, dev->slot, dev->func, bar_offset, all_1s, 4);
+
+	/* read back BARX */
+	mem_needed = pci_config_read_field(dev->bus, dev->slot, dev->func, bar_offset, 4);
+
+	/* calculate mem_needed */
+	// clear all encoding information bits (bits 0-3 for I/O)
+	mem_needed &= 0xFFFFFFF0;
+	// invert all bits
+	mem_needed = ~mem_needed;
+	//increment by 1
+	mem_needed += 1;
+
+	/* write back original value */
+	pci_config_write_field(dev->bus, dev->slot, dev->func, bar_offset, bar_val, 4);
+
+	/* reenable I/O register decode (cmd register bit 1) */
+	cmd |= 0b10;
+	//cmd |= 0b1;
+        pci_config_write_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, cmd, 2);
+    }
+
+    return mem_needed;
+}
+
+void add_bar_to_device(uint32_t bar_val, uint32_t bar_offset, PCIDevice *dev){
+    /* Unimplemented Base Address Registers are hardwired to zero */
+    if(bar_val == 0){
+	return;
+    }
+    if(bar_val & 0b1){
+	uint32_t base_addr = (bar_val & 0xFFFFFFFC);
 	IOBaseAddr *new_addr = (IOBaseAddr*)kmalloc(sizeof(IOBaseAddr));
 
 	new_addr->base_addr = base_addr;
+	new_addr->mem_needed = decode_bar(bar_val, bar_offset, dev);
 	new_addr->next_io_addr = NULL;
 
 	if(dev->io_addrs == NULL){
 	    dev->io_addrs = new_addr;
+	    printk("I/O memory address: 0x%x (size=0x%x)\n", base_addr, new_addr->mem_needed);
 	    return;
 	}
 	
@@ -76,13 +166,14 @@ void add_bar_to_device(uint32_t bar, PCIDevice *dev){
 	    cur_io_addr = cur_io_addr->next_io_addr;
 	}
 	cur_io_addr->next_io_addr = new_addr;
-	printk("I/O memory address: 0x%x\n", base_addr);
+	printk("I/O memory address: 0x%x (size=0x%x)\n", base_addr, new_addr->mem_needed);
     }
     else {
-	uint32_t base_addr = (bar & 0xFFFFFFF0) >> 4;
+	uint32_t base_addr = (bar_val & 0xFFFFFFF0) >> 4;
 	//uint8_t prefetchable = (bar & 0b1000) >> 3;
-	uint8_t type = (bar & 0b110) >> 1;
-	printk("type 0x%x memory address: 0x%x\n", type, base_addr);
+	uint8_t type = (bar_val & 0b110) >> 1;
+	uint32_t mem_needed = decode_bar(bar_val, bar_offset, dev);
+	printk("type 0x%x memory address: 0x%x (size=0x%x)\n", type, base_addr, mem_needed);
     }
 }
 
@@ -94,7 +185,7 @@ PCIDevice *init_device(uint8_t bus, uint8_t device, uint8_t function, uint16_t v
     uint8_t class_code = pci_config_read_field(bus, device, function, PCI_CONFIG_CLASS_CODE, 1);
     uint8_t header_type = pci_config_read_field(bus, device, function, PCI_CONFIG_HEADER_TYPE, 1);
     printk("-----------------------------------------------------------------\n");
-    printk("vendor_id = 0x%x\n", vendor_id);
+    printk("vendor_id = 0x%x [%s]\n", vendor_id, lookup_vendor_id(vendor_id));
     printk("device_id = 0x%x\n", device_id);
     new_dev->bus = bus;
     new_dev->slot = device;
@@ -108,22 +199,23 @@ PCIDevice *init_device(uint8_t bus, uint8_t device, uint8_t function, uint16_t v
     new_dev->io_addrs = NULL;
     new_dev->mem_addrs = NULL;
     
-    if(header_type == 0x00){
+    if(header_type == 0x00){	
 	uint32_t bar0 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR0, 4);
 	uint32_t bar1 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR1, 4);
 	uint32_t bar2 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR2, 4);
 	uint32_t bar3 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR3, 4);
 	uint32_t bar4 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR4, 4);
 	uint32_t bar5 = pci_config_read_field(bus, device, function, PCI_CONFIG_BAR5, 4);
+	
 	uint8_t interrupt_pin = pci_config_read_field(bus, device, function, PCI_CONFIG_INTERRUPT_PIN, 1);
 	uint8_t interrupt_line = pci_config_read_field(bus, device, function, PCI_CONFIG_INTERRUPT_LINE, 1);
 	
-	add_bar_to_device(bar0, new_dev);
-	add_bar_to_device(bar1, new_dev);
-	add_bar_to_device(bar2, new_dev);
-	add_bar_to_device(bar3, new_dev);
-	add_bar_to_device(bar4, new_dev);
-	add_bar_to_device(bar5, new_dev);
+	add_bar_to_device(bar0, PCI_CONFIG_BAR0, new_dev);
+	add_bar_to_device(bar1, PCI_CONFIG_BAR1, new_dev);
+	add_bar_to_device(bar2, PCI_CONFIG_BAR2, new_dev);
+	add_bar_to_device(bar3, PCI_CONFIG_BAR3, new_dev);
+	add_bar_to_device(bar4, PCI_CONFIG_BAR4, new_dev);
+	add_bar_to_device(bar5, PCI_CONFIG_BAR5, new_dev);
 
 	new_dev->interrupt_pin = interrupt_pin;
 	new_dev->interrupt_line = interrupt_line;
@@ -194,5 +286,8 @@ int pci_probe(PCIDevice **device_list) {
 	}
     }
 
+    if(found_devices){
+	printk("-----------------------------------------------------------------\n");
+    }
     return found_devices;
 }

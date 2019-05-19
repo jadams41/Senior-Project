@@ -705,6 +705,7 @@ void syscall_handler(int irq, int err, uint64_t syscall_number){
             asm("hlt");
     }
 }
+
 void IRQ_set_handler(int irq, void *handler){
     c_ISRs[irq] = handler;
 }
@@ -719,9 +720,11 @@ static void __attribute__((unused)) ist_init(){
     tss.IST5 = (uint64_t)ist_stack4 + 4096;
     tss.IST6 = (uint64_t)ist_stack5 + 4096;
     tss.IST7 = (uint64_t)ist_stack6 + 4096;
+
     int i;
     for(i=0; i<7; i++)
         tss.IOMap[i] = 0;
+
     tss.IOMap[7] = -1;
     tss.IOaddress = 104;
 
@@ -762,10 +765,10 @@ void idt_init(void){
     //the respective assembly routines
     int i;
     uint16_t istNum;
-	for(i = 0; i < IDT_SIZE; i++){
-	    IDT_Entry *entry = idt + i;
-	    entry->funct_ptr_1 = (uint64_t) ISRs[i] & 0x000000000000FFFF;
-	    entry->gdt_select = 0x08;
+    for(i = 0; i < IDT_SIZE; i++){
+	IDT_Entry *entry = idt + i;
+	entry->funct_ptr_1 = (uint64_t) ISRs[i] & 0x000000000000FFFF;
+	entry->gdt_select = 0x08;
         //conditionally set the ist
         istNum = GENERAL_INTERRUPT_STACK;
 
@@ -787,14 +790,14 @@ void idt_init(void){
         }
 
         entry->ist = istNum;
-	    entry->res = 0;
-	    entry->type = 0xF;
-	    entry->must_be_0 = 0;
-	    entry->priv_lvl = 0;
-	    entry->present = 1;
-	    entry->funct_ptr_2 = ((uint64_t) ISRs[i] & 0x00000000FFFF0000) >> 16;
-	    entry->funct_ptr_3 = ((uint64_t) ISRs[i] & 0xFFFFFFFF00000000) >> 32;
-	    entry->reserved = 0;
+	entry->res = 0;
+	entry->type = 0xF;
+	entry->must_be_0 = 0;
+	entry->priv_lvl = 0;
+	entry->present = 1;
+	entry->funct_ptr_2 = ((uint64_t) ISRs[i] & 0x00000000FFFF0000) >> 16;
+	entry->funct_ptr_3 = ((uint64_t) ISRs[i] & 0xFFFFFFFF00000000) >> 32;
+	entry->reserved = 0;
     }
 
     //zero out all of the c_ISRs
@@ -802,45 +805,45 @@ void idt_init(void){
         IRQ_set_handler(i, (void*)0);
     }
 
-	/* here are the ports for the 2 PICs
-	 *
-	 * PIC1 cmd: 0x20 data: 0x21
-	 * PIC2 cmd: 0xA0 data: 0xA1
-	 */
+    /* here are the ports for the 2 PICs
+     *
+     * PIC1 cmd: 0x20 data: 0x21
+     * PIC2 cmd: 0xA0 data: 0xA1
+     */
 
-	/* ICW1 - begin initialization of the PIC */
-	outby(0x20, 0x11);
-	outby(0xA0, 0x11);
+    /* ICW1 - begin initialization of the PIC */
+    outby(0x20, 0x11);
+    outby(0xA0, 0x11);
 
-	/* ICW2 - remap the offset address of IDT */
-	/*
-	 * In x86 protected mode, we have to remap the PICs beyond 0x20 because
-	 * Intel reserved the first 32 interrupts for cpu exceptions
-	 */
-	outby(0x21, 0x20);
-	//second PIC starts 8 lines after the first because each has 8 lines
-	outby(0xA1, 0x28);
+    /* ICW2 - remap the offset address of IDT */
+    /*
+     * In x86 protected mode, we have to remap the PICs beyond 0x20 because
+     * Intel reserved the first 32 interrupts for cpu exceptions
+     */
+    outby(0x21, 0x20);
+    //second PIC starts 8 lines after the first because each has 8 lines
+    outby(0xA1, 0x28);
 
-	/* ICW3 - setup cascading */
-	outby(0x21, 0x00);
-	outby(0xA1, 0x00);
+    /* ICW3 - setup cascading */
+    outby(0x21, 0x00);
+    outby(0xA1, 0x00);
 
-	/* ICW4 - environment info */
-	outby(0x21, 0x01);
-	outby(0xA1, 0x01);
+    /* ICW4 - environment info */
+    outby(0x21, 0x01);
+    outby(0xA1, 0x01);
 
-	//mask all interrupts
-	outby(0x21, 0xff);
-	outby(0xA1, 0xff);
+    //mask all interrupts
+    outby(0x21, 0xff);
+    outby(0xA1, 0xff);
 
     //todo, move this struct to the header file
     struct {
-        uint16_t length;
-        void*    base;
-	} __attribute__((packed)) IDTR = { sizeof(IDT_Entry) * 256, idt };
-
+	uint16_t length;
+	void*    base;
+    } __attribute__((packed)) IDTR = { sizeof(IDT_Entry) * 256, idt };
+    
     //todo, move this to a macro in utils
-	asm ( "lidt %0" : : "m"(IDTR) );
+    asm ( "lidt %0" : : "m"(IDTR) );
 
     //todo, move the isrs out of this file
     //and then move these function calls somewhere else

@@ -15,13 +15,13 @@ start:
 	call check_multiboot
 	call check_cpuid
 	call check_long_mode
+	
+	call set_up_page_tables
+	call enable_paging
 
-    call set_up_page_tables
-    call enable_paging
+	lgdt [gdt64.pointer]
 
-    lgdt [gdt64.pointer]
-
-    jmp gdt64.code:long_mode_start
+	jmp gdt64.code:long_mode_start
 
 	hlt
 

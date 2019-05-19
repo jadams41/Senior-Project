@@ -10,10 +10,17 @@ skip printk_warn
 skip printk_info
 skip printk_dir
 
-# skip kmalloc
+# skip memory allocation
 skip kmalloc
+skip dma_alloc_coherent
 
+# skip mmio
 skip inb
+skip inw
+skip inl
 skip outb
+skip outw
+skip outl
+
 skip entry_present
 skip strip_present_bits

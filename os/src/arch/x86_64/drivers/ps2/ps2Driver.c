@@ -25,114 +25,114 @@ char scancode_dict[256];
 char shift_down_dict[256];
 
 void initialize_scancodes(){
-	scancode_dict[2] = '1';
-	scancode_dict[3] = '2';
-	scancode_dict[4] = '3';
-	scancode_dict[5] = '4';
-	scancode_dict[6] = '5';
-	scancode_dict[7] = '6';
-	scancode_dict[8] = '7';
-	scancode_dict[9] = '8';
-	scancode_dict[10] = '9';
-	scancode_dict[11] = '0';
-	scancode_dict[12] = '-';
-	scancode_dict[13] = '=';
-	scancode_dict[14] = 8; //backspace
-	scancode_dict[16] = 'q';
-	scancode_dict[17] = 'w';
-	scancode_dict[18] = 'e';
-	scancode_dict[19] = 'r';
-	scancode_dict[20] = 't';
-	scancode_dict[21] = 'y';
-	scancode_dict[22] = 'u';
-	scancode_dict[23] = 'i';
-	scancode_dict[24] = 'o';
-	scancode_dict[25] = 'p';
-	scancode_dict[26] = '[';
-	scancode_dict[27] = ']';
-	scancode_dict[28] = '\n';
-	scancode_dict[29] = 'x';
-	scancode_dict[30] = 'a';
-	scancode_dict[31] = 's';
-	scancode_dict[32] = 'd';
-	scancode_dict[33] = 'f';
-	scancode_dict[34] = 'g';
-	scancode_dict[35] = 'h';
-	scancode_dict[36] = 'j';
-	scancode_dict[37] = 'k';
-	scancode_dict[38] = 'l';
-	scancode_dict[39] = ';';
-	scancode_dict[40] = '\'';
-	scancode_dict[41] = '\\';
-	scancode_dict[42] = 14; //left shift key
-	scancode_dict[43] = 'x';
-	scancode_dict[44] = 'z';
-	scancode_dict[45] = 'x';
-	scancode_dict[46] = 'c';
-	scancode_dict[47] = 'v';
-	scancode_dict[48] = 'b';
-	scancode_dict[49] = 'n';
-	scancode_dict[50] = 'm';
-	scancode_dict[51] = ',';
-	scancode_dict[52] = '.';
-	scancode_dict[53] = '/';
-	scancode_dict[54] = 14; //left shift key
-	scancode_dict[57] = ' ';
+    scancode_dict[2] = '1';
+    scancode_dict[3] = '2';
+    scancode_dict[4] = '3';
+    scancode_dict[5] = '4';
+    scancode_dict[6] = '5';
+    scancode_dict[7] = '6';
+    scancode_dict[8] = '7';
+    scancode_dict[9] = '8';
+    scancode_dict[10] = '9';
+    scancode_dict[11] = '0';
+    scancode_dict[12] = '-';
+    scancode_dict[13] = '=';
+    scancode_dict[14] = 8; //backspace
+    scancode_dict[16] = 'q';
+    scancode_dict[17] = 'w';
+    scancode_dict[18] = 'e';
+    scancode_dict[19] = 'r';
+    scancode_dict[20] = 't';
+    scancode_dict[21] = 'y';
+    scancode_dict[22] = 'u';
+    scancode_dict[23] = 'i';
+    scancode_dict[24] = 'o';
+    scancode_dict[25] = 'p';
+    scancode_dict[26] = '[';
+    scancode_dict[27] = ']';
+    scancode_dict[28] = '\n';
+    scancode_dict[29] = 'x';
+    scancode_dict[30] = 'a';
+    scancode_dict[31] = 's';
+    scancode_dict[32] = 'd';
+    scancode_dict[33] = 'f';
+    scancode_dict[34] = 'g';
+    scancode_dict[35] = 'h';
+    scancode_dict[36] = 'j';
+    scancode_dict[37] = 'k';
+    scancode_dict[38] = 'l';
+    scancode_dict[39] = ';';
+    scancode_dict[40] = '\'';
+    scancode_dict[41] = '\\';
+    scancode_dict[42] = 14; //left shift key
+    scancode_dict[43] = 'x';
+    scancode_dict[44] = 'z';
+    scancode_dict[45] = 'x';
+    scancode_dict[46] = 'c';
+    scancode_dict[47] = 'v';
+    scancode_dict[48] = 'b';
+    scancode_dict[49] = 'n';
+    scancode_dict[50] = 'm';
+    scancode_dict[51] = ',';
+    scancode_dict[52] = '.';
+    scancode_dict[53] = '/';
+    scancode_dict[54] = 14; //left shift key
+    scancode_dict[57] = ' ';
 }
 
 void initialize_shift_down_dict(){
-	shift_down_dict['`'] = '~';
-	shift_down_dict['1'] = '!';
-	shift_down_dict['2'] = '@';
-	shift_down_dict['3'] = '#';
-	shift_down_dict['4'] = '$';
-	shift_down_dict['5'] = '%';
-	shift_down_dict['6'] = '^';
-	shift_down_dict['7'] = '&';
-	shift_down_dict['8'] = '*';
-	shift_down_dict['9'] = '(';
-	shift_down_dict['0'] = ')';
-	shift_down_dict['-'] = '_';
-	shift_down_dict['='] = '+';
-	shift_down_dict['q'] = 'Q';
-	shift_down_dict['w'] = 'W';
-	shift_down_dict['e'] = 'E';
-	shift_down_dict['r'] = 'R';
-	shift_down_dict['t'] = 'T';
-	shift_down_dict['y'] = 'Y';
-	shift_down_dict['u'] = 'U';
-	shift_down_dict['i'] = 'I';
-	shift_down_dict['o'] = 'O';
-	shift_down_dict['p'] = 'P';
-	shift_down_dict['['] = '{';
-	shift_down_dict[']'] = '}';
-	shift_down_dict['\\'] = '|';
-	shift_down_dict['a'] = 'A';
-	shift_down_dict['s'] = 'S';
-	shift_down_dict['d'] = 'D';
-	shift_down_dict['f'] = 'F';
-	shift_down_dict['g'] = 'G';
-	shift_down_dict['h'] = 'H';
-	shift_down_dict['j'] = 'J';
-	shift_down_dict['k'] = 'K';
-	shift_down_dict['l'] = 'L';
-	shift_down_dict[';'] = ':';
-	shift_down_dict['\''] = '"';
-	shift_down_dict['z'] = 'Z';
-	shift_down_dict['x'] = 'X';
-	shift_down_dict['c'] = 'C';
-	shift_down_dict['v'] = 'V';
-	shift_down_dict['b'] = 'B';
-	shift_down_dict['n'] = 'N';
-	shift_down_dict['m'] = 'M';
-	shift_down_dict[','] = '<';
-	shift_down_dict['.'] = '>';
-	shift_down_dict['/'] = '?';
+    shift_down_dict['`'] = '~';
+    shift_down_dict['1'] = '!';
+    shift_down_dict['2'] = '@';
+    shift_down_dict['3'] = '#';
+    shift_down_dict['4'] = '$';
+    shift_down_dict['5'] = '%';
+    shift_down_dict['6'] = '^';
+    shift_down_dict['7'] = '&';
+    shift_down_dict['8'] = '*';
+    shift_down_dict['9'] = '(';
+    shift_down_dict['0'] = ')';
+    shift_down_dict['-'] = '_';
+    shift_down_dict['='] = '+';
+    shift_down_dict['q'] = 'Q';
+    shift_down_dict['w'] = 'W';
+    shift_down_dict['e'] = 'E';
+    shift_down_dict['r'] = 'R';
+    shift_down_dict['t'] = 'T';
+    shift_down_dict['y'] = 'Y';
+    shift_down_dict['u'] = 'U';
+    shift_down_dict['i'] = 'I';
+    shift_down_dict['o'] = 'O';
+    shift_down_dict['p'] = 'P';
+    shift_down_dict['['] = '{';
+    shift_down_dict[']'] = '}';
+    shift_down_dict['\\'] = '|';
+    shift_down_dict['a'] = 'A';
+    shift_down_dict['s'] = 'S';
+    shift_down_dict['d'] = 'D';
+    shift_down_dict['f'] = 'F';
+    shift_down_dict['g'] = 'G';
+    shift_down_dict['h'] = 'H';
+    shift_down_dict['j'] = 'J';
+    shift_down_dict['k'] = 'K';
+    shift_down_dict['l'] = 'L';
+    shift_down_dict[';'] = ':';
+    shift_down_dict['\''] = '"';
+    shift_down_dict['z'] = 'Z';
+    shift_down_dict['x'] = 'X';
+    shift_down_dict['c'] = 'C';
+    shift_down_dict['v'] = 'V';
+    shift_down_dict['b'] = 'B';
+    shift_down_dict['n'] = 'N';
+    shift_down_dict['m'] = 'M';
+    shift_down_dict[','] = '<';
+    shift_down_dict['.'] = '>';
+    shift_down_dict['/'] = '?';
 }
 
 //todo - this could probably be removed
 char getCharFromScan(int scan){
-	return scancode_dict[scan];
+    return scancode_dict[scan];
 }
 
 //todo - move these structures to the header file
@@ -205,7 +205,7 @@ void pollInputBuffer() {
     retVal = inb(CMD_PORT);
     stat = (status*)&retVal;
     while(stat->input_buf || stat->time_err) {
-        retVal = inb(CMD_PORT);
+	retVal = inb(CMD_PORT);
     }
 }
 
@@ -215,7 +215,7 @@ int8_t pollOutputBuffer() {
     retVal = inb(CMD_PORT);
     stat = (status*)&retVal;
     while(!(stat->output_buf) || stat->time_err) {
-        retVal = inb(CMD_PORT);
+	retVal = inb(CMD_PORT);
     }
     return inb(DATA_PORT);
 }
@@ -358,9 +358,9 @@ int8_t pollOutputBuffer() {
 // }
 
 /**
-  * poll status until the 1 bit in response is clear
-  * this is needed before sending the next byte of a two byte command
-  */
+ * poll status until the 1 bit in response is clear
+ * this is needed before sending the next byte of a two byte command
+ */
 // void block_until_input_ready(){
 // 	unsigned char status = inb(PS2_STATUS);
 // 	struct ps2_status *mask = (struct ps2_status*)&status;
@@ -377,54 +377,54 @@ int8_t pollOutputBuffer() {
 // }
 
 void keyboard_handler_main(char scan){
-	/* write End Of Input */
-	outb(0x20, 0x20);
+    /* write End Of Input */
+    outb(0x20, 0x20);
 
-	// tryToTriggerPageFault();
+    // tryToTriggerPageFault();
 
-	//translate the scancode to the ascii char
-	//char val = scancode_dict[(int)scan];
+    //translate the scancode to the ascii char
+    //char val = scancode_dict[(int)scan];
 
-	if(scan > 0){
-    	//shift was pressed
-    	if(scan == 0x2a){
-    		left_shift_pressed = 1;
-    	}
-    	else if(scan == 0x36){
-    		right_shift_pressed = 1;
-    	}
-    	else if(scan == 0x1d){
-    		left_ctrl_pressed = 1;
-    	}
-    	else if(scan == 0xe0){
-    		right_ctrl_pressed = 1;
-    	}
-    	else {
-    		char val = scancode_dict[(uint8_t)scan];
-			if(left_ctrl_pressed || right_ctrl_pressed){
-				if(val == 'c'){
-					stupidFunctionDead = 1;
-					return;
-				}
-			}
-			uint8_t idx = (uint8_t)val;
-			// printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
-			KBD_write(left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
+    if(scan > 0){
+	//shift was pressed
+	if(scan == 0x2a){
+	    left_shift_pressed = 1;
+	}
+	else if(scan == 0x36){
+	    right_shift_pressed = 1;
+	}
+	else if(scan == 0x1d){
+	    left_ctrl_pressed = 1;
+	}
+	else if(scan == 0xe0){
+	    right_ctrl_pressed = 1;
+	}
+	else {
+	    char val = scancode_dict[(uint8_t)scan];
+	    if(left_ctrl_pressed || right_ctrl_pressed){
+		if(val == 'c'){
+		    stupidFunctionDead = 1;
+		    return;
 		}
+	    }
+	    uint8_t idx = (uint8_t)val;
+	    // printk("%c", left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
+	    KBD_write(left_shift_pressed || right_shift_pressed ? shift_down_dict[idx] : val);
+	}
     }
     // means that key was released
     else {
-    	unsigned char uval = (unsigned char)scan;
-    	if(uval == 0xaa){
-    		left_shift_pressed = 0;
-    	}
-    	else if(uval == 0xb6){
-    		right_shift_pressed = 0;
-    	}
-    	// else if(uval == 0x)
-    	else if(uval == 0x9d){
-    		left_ctrl_pressed = right_ctrl_pressed = 0;
-    	}
+	unsigned char uval = (unsigned char)scan;
+	if(uval == 0xaa){
+	    left_shift_pressed = 0;
+	}
+	else if(uval == 0xb6){
+	    right_shift_pressed = 0;
+	}
+	// else if(uval == 0x)
+	else if(uval == 0x9d){
+	    left_ctrl_pressed = right_ctrl_pressed = 0;
+	}
     }
 
 

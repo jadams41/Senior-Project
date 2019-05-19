@@ -72,14 +72,16 @@ run: $(iso)
 	-net socket,listen=:8010 \
 	-no-kvm-irqchip
 
+# -netdev tap,id=mynet0,ifname=qtap0,script=no,downscript=no
+# ,netdev=mynet0,macaddr=52:55:00:d1:55:01
 runf: $(fat)
 	@sudo $(vm_prog) \
 	-machine ubuntu \
+	-enable-kvm \
 	-s -drive format=raw,file=$(fat) \
 	-serial stdio \
-	-netdev tap,id=mynet0,ifname=qtap0,script=no,downscript=no \
-	-net nic,model=rtl8139,netdev=mynet0,macaddr=52:55:00:d1:55:01 \
-	-net dump \
+	-net nic,macaddr=fa:fa:fa:fa:fa:fa,model=rtl8139 \
+	-net bridge,br=virbr0 \
 	-no-kvm-irqchip
 
 runb: $(iso)

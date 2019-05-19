@@ -38,6 +38,8 @@ typedef struct PCIDevice PCIDevice;
 
 struct IOBaseAddr {
     uint32_t base_addr;
+    
+    uint64_t mem_needed;
     IOBaseAddr *next_io_addr;
 };
 
@@ -45,6 +47,8 @@ struct MemoryBaseAddr {
     uint32_t base_addr;
     uint8_t prefetchable;
     uint8_t type;
+
+    uint64_t mem_needed;
     MemoryBaseAddr *next_mem_addr;
 };
 

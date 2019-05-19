@@ -790,5 +790,8 @@ void *alloc_dma_coherent(size_t size, uint32_t *phys_addr){
     }
 
     *phys_addr = phys_addrs[0];
-    return ((void*)extra) + sizeof(KmallocExtra);
+
+    //todo (adding the size of the extra might be breaking stuff), trying without
+    //return ((void*)extra) + sizeof(KmallocExtra);
+    return ((void*)extra);
 }

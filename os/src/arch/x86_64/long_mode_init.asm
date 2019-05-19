@@ -287,26 +287,27 @@ extern nextProc
 section .text
 bits 64
 long_mode_start:
-    ; load 0 into all data segment registers
-    mov ax, 0
-    mov ss, ax
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
+	;; load 0 into all data segment registers
+	mov ax, 0
+	mov ss, ax
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
 
-	;print OKAY
+	;; print OKAY
 	mov rax, 0x2f592f412d4b2d4f
-    mov qword [0xb8000], rax
+	mov qword [0xb8000], rax
 
-    mov rdi, [multiboot_pointer]
-    mov rsi, [multiboot_test]
+	;;  call kmain with multiboot_point and multiboot_test
+	mov rdi, [multiboot_pointer]
+	mov rsi, [multiboot_test]
 
-    call kmain
-    hlt
+	call kmain
+	hlt
 
 halt_wrapper:
-    hlt
+	hlt
 
 load_page_table:
 	mov cr3, rdi

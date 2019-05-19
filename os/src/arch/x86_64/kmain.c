@@ -29,6 +29,16 @@ extern PROC_context *curProc;
 struct BlockDev *ata = 0;
 struct PCIDevice *pci_devices = NULL;
 
+// configuration globals
+int no_debug = 0;
+enum printing_level {
+    info, //print everything
+    warn, //exclude info
+    err, //exclude info and warn
+    silent
+} printk_conf = info;
+
+
 //takes params void *blockBuffer, uint64_t blockNumber
 void printBlock(void *params){
     uint64_t *paramArr = (uint64_t*)params;
@@ -158,10 +168,10 @@ int init_pci_devices(){
     PCIDevice *cur = pci_devices;
 
     while(cur){
-	printk("dev vendor = 0x%x\n", cur->vendor_id);
+	//printk("dev vendor = 0x%x\n", cur->vendor_id);
 	switch(cur->vendor_id){
 	case 0x10ec:
-	    printk("found a realtek device\n");
+	    //printk("found a realtek device\n");
 	    switch(cur->device_id){
 	    case 0x8139:
 	        if(!init_rt8139(cur)){
@@ -190,6 +200,28 @@ void readBlock32(){
     }
     kexit();
 }
+
+/* void configure_kmain_from_env(){ */
+/*     if(getenv("KMAIN_NODEBUG")){ */
+/* 	no_debug = 1; */
+/*     } */
+
+/*     char *print_level = getenv("KMAIN_PRINTLEVEL"); */
+/*     if(print_level){ */
+/* 	if(strcmp(print_level, "INFO") == 0){ */
+/* 	    printk_conf = info; */
+/* 	} */
+/* 	else if(strcmp(print_level, "WARN") == 0){ */
+/* 	    printk_conf = warn; */
+/* 	} */
+/* 	else if(strcmp(print_level, "ERR") == 0){ */
+/* 	    printk_conf = err; */
+/* 	} */
+/* 	else if(strcmp(print_level, "SILENT") == 0){ */
+/* 	    printk_conf = silent; */
+/* 	} */
+/*     } */
+/* } */
 
 int kmain(void *multiboot_point, unsigned int multitest){
   asm("cli");
@@ -228,7 +260,8 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   char *y = (char*)&v;
 
-  printk("%s\n",*y ? "Endianness: Little Endian" : "Endianness: Big Endian");
+  printk_info("%s\n",*y ? "Endianness: Little Endian" : "Endianness: Big Endian");
+  
   //initialize the memory info datastructure
   init_usable_segment_struct();
 
@@ -251,20 +284,19 @@ int kmain(void *multiboot_point, unsigned int multitest){
   init_kheap();
   ata = ata_probe(0x1F0, 0x40, 0, 0x14);
 
+  printk_info("Searching for connected PCI devices:\n");
   int num_pci_devs = pci_probe(&pci_devices);
-  printk("%d pci devices found\n", num_pci_devs);
+  printk_info("Found %d pci devices\n", num_pci_devs);
 
-  int enabled = 0;
-  while(!enabled);
-  
   if(num_pci_devs){
       init_pci_devices();
   }
-
-  uint64_t initFAT32Params[2] = {2, (uint64_t)ata};
-  PROC_create_kthread(initFAT32, initFAT32Params);
-	
   
+  int enabled = 0;
+  while(!enabled);
+  
+  /* uint64_t initFAT32Params[2] = {2, (uint64_t)ata}; */
+  /* PROC_create_kthread(initFAT32, initFAT32Params); */
   
   while(1){
       PROC_run();
