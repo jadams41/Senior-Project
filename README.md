@@ -96,12 +96,12 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
       - [ ] Implement primitive driver functionality:
          - [X] NIC initalization (utilizing pci control in `PCIDevice` struct returned from `pci_probe`)
          - [X] Basic implementation of asynchronous NIC control (transmitting and receiving packets).
-         - [ ] Enable NIC's interrupts and install ISRs which use asynchronous NIC control functionality.
+         - [X] Enable NIC's interrupts and install ISRs which use asynchronous NIC control functionality.
       - [ ] Test basic NIC functionality (transmit and receive ethernet frames):
-         - [ ] Research and document strategies for networking between `qemu` VM's and host machine.
-         - [ ] TEST: Guest receives ethernet frame from host VM:
-            - [ ] Verify that interrupt fires after frame is sent from host -> VM
-            - [ ] Verify that frame's header information and data can be properly extracted in VM.
+         - [X] Research and document strategies for networking between `qemu` VM's and host machine.
+         - [X] TEST: Guest receives ethernet frame from host VM:
+            - [X] Verify that interrupt fires after frame is sent from host -> VM
+            - [X] Verify that frame's header information and data can be properly extracted in VM.
          - [ ] TEST: Guest VM sends ethernet frame to host:
             - [ ] Verify that ethernet frame sent from guest is received on the host VM.
             - [ ] Verify that frame's header information and data are consistent (when received on host).
