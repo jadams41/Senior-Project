@@ -6,6 +6,11 @@
 #define NUM_TX_DESC 4
 #define MAX_ETH_FRAME_SIZE 1792
 
+#define RX_BUF_LEN 8192
+#define RX_BUF_PAD 16
+#define RX_BUF_WRAP_PAD 2048 /* spare padding to handle lack of packet wrap */
+#define RX_BUF_TOT_LEN (RX_BUF_LEN + RX_BUF_PAD + RX_BUF_WRAP_PAD)
+
 #define TX_BUF_SIZE MAX_ETH_FRAME_SIZE
 #define TX_BUF_TOT_LEN (TX_BUF_SIZE * NUM_TX_DESC)
 

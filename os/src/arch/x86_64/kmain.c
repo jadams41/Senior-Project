@@ -255,7 +255,8 @@ int kmain(void *multiboot_point, unsigned int multitest){
 
   //initialize serial output
   SER_init();
-  printk("----SERIAL DEBUGGING BEGIN----\n");
+  printk_rainbow("----SERIAL DEBUGGING BEGIN----\n");
+  
   int v = 1;
 
   char *y = (char*)&v;

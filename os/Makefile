@@ -77,7 +77,6 @@ run: $(iso)
 runf: $(fat)
 	@sudo $(vm_prog) \
 	-machine ubuntu \
-	-enable-kvm \
 	-s -drive format=raw,file=$(fat) \
 	-serial stdio \
 	-net nic,macaddr=fa:fa:fa:fa:fa:fa,model=rtl8139 \

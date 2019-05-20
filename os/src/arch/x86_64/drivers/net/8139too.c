@@ -85,16 +85,60 @@ enum TxStatusBits {
     TxCarrierLost	= 0x80000000,
 };
 
+/* bit flags in the Rx Status field found the Rx Packet header
+ * NOTE: Rx Status field is consulted when an Rx interrupt is triggered
+ *       and the packet header and packet are placed in the Rx Ring Buffer */
 enum RxStatusBits {
-    RxMulticast	= 0x8000,
-    RxPhysical	= 0x4000,
-    RxBroadcast	= 0x2000,
-    RxBadSymbol	= 0x0020,
-    RxRunt		= 0x0010,
-    RxTooLong	= 0x0008,
-    RxCRCErr	= 0x0004,
-    RxBadAlign	= 0x0002,
-    RxStatusOK	= 0x0001,
+    RxMulticast	= 0x8000, /* MAR - Multicast Address received: Set to 1 indicates 
+			     that multicast packet is received */ 
+
+    RxPhysical	= 0x4000, /* PAM - Physical Address Matched: Set to 1 indicates that
+			     the destination address of this packet matches 
+			     matches the value written in the ID registers (MAC) */
+
+    RxBroadcast	= 0x2000, /* BAR - Broadcast Address Received: Set to 1 indicates
+			     that a broadcast packet is received. BAR, MAR will
+			     not be set simultaneously. */
+    
+    RxBadSymbol	= 0x0020, /* ISE - Invalid Symbol Error: (100Base-TX only) An 
+			     invalid symbol was encountered during the reception
+			     of this packet if this bit is set to 1. */
+    
+    RxRunt	= 0x0010, /* RUNT - Runt packet received: Set to 1 indicates
+			     that the received packet length is smaller than 64
+			     bytes */
+    
+    RxTooLong	= 0x0008, /* LONG - Long Packet: Set to 1 indicates that the
+			     size of the received packet exceeds 4k bytes */
+    
+    RxCRCErr	= 0x0004, /* CRC - CRC Error: When set, indicates that a CRC
+			     error occurred on the received packet. */
+    
+    RxBadAlign	= 0x0002, /* FAE - Frame Alignment Error: When set, indicates
+			     that a frame alignmnent error occurred on this
+			     received packet. */
+
+    RxStatusOK	= 0x0001, /* ROK - Receive OK: When set, indicates that a good
+			     packet is received */
+};
+
+enum RxConfigBits {
+	/* rx fifo threshold */
+	RxCfgFIFOShift	= 13,
+	RxCfgFIFONone	= (7 << RxCfgFIFOShift),
+
+	/* Max DMA burst */
+	RxCfgDMAShift	= 8,
+	RxCfgDMAUnlimited = (7 << RxCfgDMAShift),
+
+	/* rx ring buffer length */
+	RxCfgRcv8K	= 0,
+	RxCfgRcv16K	= (1 << 11),
+	RxCfgRcv32K	= (1 << 12),
+	RxCfgRcv64K	= (1 << 11) | (1 << 12),
+
+	/* Disable packet wrap at end of Rx buffer. (not possible with 64k) */
+	RxNoWrap	= (1 << 7),
 };
 
 enum tx_config_bits {
@@ -200,15 +244,38 @@ void parse_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
     printk("\n");
 
     if(ethertype_or_len < 1501){
-	printk("Data Length: %hu\n", ethertype_or_len);
+    	printk("Data Length: %hu\n", ethertype_or_len);
     }
     else {
-	printk("Ethertype: ");
-	print_ethertype(ethertype_or_len);
-	printk(" (0x%04x)\n", ethertype_or_len);
+    	printk("Ethertype: ");
+    	print_ethertype(ethertype_or_len);
+    	printk(" (0x%04x)\n", ethertype_or_len);
     }
     
     printk("*************************************\n\n");
+}
+
+/* Inform rtl8139 that packet was successfully received 
+ * NOTE: acknowledgement procedure taken from Linux Source
+ */
+static void rtl8139_rx_isr_ack(uint32_t rt_ioaddr){
+    static uint64_t rx_errors = 0, rx_fifo_errors = 0;
+    uint16_t status;
+
+    status = inw(rt_ioaddr + IntrStatus) & RxAckBits;
+
+    /* clear out errors and receive interrupts */
+    if(status != 0){
+	if(status & (RxFIFOOver | RxOverflow)) {
+	    printk_warn("Rx Error occurred (#%lx during driver operation)\n", ++rx_errors);
+	    if (status & RxFIFOOver){
+		printk_warn("Rx Fifo Error occurred (#%lx during driver operation\n", ++rx_fifo_errors);
+	    }
+	}
+
+	// write RxAck to rtl8139's interrupt status register
+	outw(global_rt_ioaddr + IntrStatus, RxAckBits);
+    }
 }
 
 int rtl_rx(){
@@ -233,7 +300,7 @@ int rtl_rx(){
 	uint32_t ring_offset = cur_rx % rx_buf_size;
 	uint32_t rx_status;
 	//unsigned int pkt_size;
-
+	
 	rx_status = le32_to_cpu(*(uint32_t*) (rx_buf + ring_offset));
 	rx_size = rx_status >> 16;
 
@@ -244,6 +311,7 @@ int rtl_rx(){
 	    printk_info("fifo copy in progress, aborting\n");
 	    break;
 	}
+	
 	/* if rx err or invalid rx_size/rx_status received 
 	 * (which happens if we get lost in the ring), 
 	 * Rx process gets reset, so we abort any further Rx processing */
@@ -262,25 +330,33 @@ int rtl_rx(){
 		    printk_warn("Rx length err\n");
 		    goto keep_pkt;
 		}
+		printk_err("Rx unrecognized Status Error\n");
 	    }
+	    else {
+		printk_err("bad packet size: %u\n", rx_size);
+	    }
+
 	    printk_err("unrecoverable Rx error, halting (should be resetting nic)\n");
+	    printk_err("debug_info:\n\trx_ring_beginning=0x%lx\n\trx_ring_end=0x%lx\n\tcur_rx=0x%lx\n", rx_buf, rx_buf + rx_buf_size, rx_buf + cur_rx);
 	    asm("hlt");
+
 	    received = -1;
 	    goto out;
 	}
 
     keep_pkt:
 	received++;
-	
+
+	/* todo: seems to be a problem when ring buffer wraps */
 	//move to next packet (logic taken from linux source, assuming that this properly aligns cur_rx to the next packet)
 	cur_rx = (cur_rx + rx_size + 4 + 3) & ~3;
 	outw(rt_ioaddr + RxBufPtr, (uint16_t) (cur_rx - 16));
-
+	
 	uint8_t *eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
 	parse_eth_frame(eth_frame_beginning, rx_size);
 	
 	//acknowledge packet
-	outw(global_rt_ioaddr + IntrStatus, RxOK);
+	rtl8139_rx_isr_ack(rt_ioaddr);
     }
 
     //update device's private cur_rx
@@ -291,7 +367,7 @@ int rtl_rx(){
 }
 
 void rtl_isr(int irq, int err){
-    printk("received rtl interrupt\n", irq);
+    //printk("received rtl interrupt\n", irq);
 
     int received = rtl_rx();
     printk_info("received %d packets\n", received);
@@ -403,16 +479,16 @@ int init_rt8139(PCIDevice *dev) {
     // size of 8192 + 16 (8K + 16 bytes) is recommended
     uint64_t rx_buffer_virt;
     uint32_t rx_buffer_phys;
-    global_rx_buffer_virt = rx_buffer_virt = (uint64_t)alloc_dma_coherent(8192 + 16, &rx_buffer_phys);
+    global_rx_buffer_virt = rx_buffer_virt = (uint64_t)alloc_dma_coherent(RX_BUF_TOT_LEN, &rx_buffer_phys);
     wipe_dma_buffer(rx_buffer_virt, 8192 + 16);
     
     outl(rt_ioaddr + RxBuf, rx_buffer_phys);
 
-    global_rx_buffer_size = 8192 + 16;
+    global_rx_buffer_size = 8192;
     
     priv->rx_buf_virt = rx_buffer_virt;
     priv->rx_buf_phys = rx_buffer_phys;
-    priv->rx_buf_size = 8192 + 16;
+    priv->rx_buf_size = 8192;
     priv->cur_rx = 0;
     
     /* enable receive and transmitter
@@ -421,7 +497,7 @@ int init_rt8139(PCIDevice *dev) {
     outb(rt_ioaddr + ChipCmd, CmdRxEnb | CmdTxEnb);
     
     /* configure the receive buffer */
-    outl(rt_ioaddr + RxConfig, 0xf | (1 << 7));
+    outl(rt_ioaddr + RxConfig, 0xf | (1 << 7)); //todo this can be improved
     outl(rt_ioaddr + TxConfig, rtl8139_tx_config);
 
     //rtl_check_media(dev,1);
