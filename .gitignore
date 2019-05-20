@@ -24,9 +24,5 @@ WORKSPACE
 #all bochs files
 *bochs*
 
-#implemented utilities
-utils/
-utils/*
-
 # markdown files compiled into .html
 README.html
