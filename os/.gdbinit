@@ -1,6 +1,6 @@
 set arch i386:x86-64:intel
 target remote localhost:1234
-symbol-file symbol.bin
+symbol-file build/symbol.bin
 set variable enabled=1
 
 # skip all print functions
