@@ -1,21 +1,22 @@
 #include <stdint-gcc.h>
-#include "utils/printk.h"
-#include "drivers/ps2/ps2Driver.h"
-#include "drivers/interrupts/idt.h"
-#include "drivers/serial/serial.h"
-#include "utils/parseMultiboot.h"
-#include "drivers/memory/memoryManager.h"
-#include "test/test.h"
-#include "utils/utils.h"
-#include "types/process.h"
-#include "test/snakes/snakes.h"
-#include "drivers/ps2/keyboard.h"
 #include "drivers/block/blockDeviceDriver.h"
-#include "types/string.h"
-#include "drivers/fs/vfs.h"
 #include "drivers/fs/fat32.h"
-#include "drivers/pci/pci.h"
+#include "drivers/fs/vfs.h"
+#include "drivers/interrupts/idt.h"
 #include "drivers/net/8139too.h"
+#include "drivers/memory/memoryManager.h"
+#include "drivers/pci/pci.h"
+#include "drivers/ps2/ps2Driver.h"
+#include "drivers/ps2/keyboard.h"
+#include "drivers/serial/serial.h"
+#include "test/test.h"
+#include "test/snakes/snakes.h"
+#include "types/process.h"
+#include "types/string.h"
+#include "utils/byte_order.h"
+#include "utils/parseMultiboot.h"
+#include "utils/printk.h"
+#include "utils/utils.h"
 
 extern void perform_syscall(int);
 extern void load_page_table(uint64_t);
@@ -32,108 +33,138 @@ struct PCIDevice *pci_devices = NULL;
 // configuration globals
 int no_debug = 0;
 enum printing_level {
-    info, //print everything
-    warn, //exclude info
-    err, //exclude info and warn
-    silent
+	info,			//print everything
+	warn,			//exclude info
+	err,			//exclude info and warn
+	silent
 } printk_conf = info;
 
-
 //takes params void *blockBuffer, uint64_t blockNumber
-void printBlock(void *params){
-    uint64_t *paramArr = (uint64_t*)params;
-    if(params == 0){
-        printk_err("No parameters were passed to printBlock, nothing will happen\n");
-        kexit();
-    }
-    uint64_t paramLen = *paramArr;
-    if(paramLen != 3){
-        printk_err("the wrong number of parameters were passed to printBlock, nothing will happen\n");
-        kexit();
-    }
-    uint8_t *block = (uint8_t*)paramArr[1];
-    uint64_t blockNum = paramArr[2];
-    uint64_t blockOffset = blockNum * 512;
+void printBlock(void *params)
+{
+	uint64_t *paramArr;
+	uint64_t paramLen;
+	uint8_t *block;
+	uint64_t blockNum;
+	uint64_t blockOffset;
+	int i;
+	int j;
 
-    /* printk("---------- BLOCK-%d ----------\n", blockNum); */
-    int i;
-    for(i = 0; i < 512; i+=16){
-        int j;
-        printk("%06x ", blockOffset + i);
-        for(j = 0; j < 16; j+=2){
-            printk("%02hx%02hx ", block[i+j+1], block[i+j]);
-        }
-        printk("\n");
-    }
-    /* printk("---------------------------\n"); */
-    kfree(params);
-    kexit();
+	paramArr = (uint64_t *) params;
+	if (params == 0) {
+		printk_err
+		    ("No parameters were passed to printBlock, nothing will happen\n");
+		kexit();
+	}
+
+	paramLen = *paramArr;
+	if (paramLen != 3) {
+		printk_err
+		    ("the wrong number of parameters were passed to printBlock, nothing will happen\n");
+		kexit();
+	}
+	block = (uint8_t *) paramArr[1];
+	blockNum = paramArr[2];
+	blockOffset = blockNum * 512;
+
+	/* printk("---------- BLOCK-%d ----------\n", blockNum); */
+	for (i = 0; i < 512; i += 16) {
+		printk("%06x ", blockOffset + i);
+		for (j = 0; j < 16; j += 2) {
+			printk("%02hx%02hx ", block[i + j + 1], block[i + j]);
+		}
+		printk("\n");
+	}
+	/* printk("---------------------------\n"); */
+	kfree(params);
+	kexit();
 }
-
 
 //takes params uint64_t blockNum, void *dst
-void readBlock(void *params){
-    uint64_t blockNum;
-    void *dst;
-    if(params == 0){
-        printk_err("No parameters were passed to readBlock, nothing will happen\n");
-        kexit();
-    }
-    if(ata == 0){
-        printk_err("ata not initialized, nothing will happen\n");
-        kexit();
-    }
-    uint64_t *paramArr = (uint64_t*)params;
-    uint64_t paramLen = *paramArr;
-    if(paramLen -1 != 2){
-        printk_err("passed the wrong number of parameters, expected 2 and received %llu", paramLen -1);
-        kexit();
-    }
+void readBlock(void *params)
+{
+	uint64_t blockNum;
+	void *dst;
+	uint64_t *paramArr;
+	uint64_t paramLen;
+	uint64_t *printBlockParms;
 
-    blockNum = paramArr[1];
-    dst = (void*)paramArr[2];
-    ata->read_block(ata, blockNum, dst);
+	if (params == 0) {
+		printk_err
+		    ("No parameters were passed to readBlock, nothing will happen\n");
+		kexit();
+	}
+	if (ata == 0) {
+		printk_err("ata not initialized, nothing will happen\n");
+		kexit();
+	}
 
-    /* printk_info("done reading block %d, creating process to print this block now\n", blockNum); */
+	paramArr = (uint64_t *) params;
+	paramLen = *paramArr;
+	if (paramLen - 1 != 2) {
+		printk_err
+		    ("passed the wrong number of parameters, expected 2 and received %llu",
+		     paramLen - 1);
+		kexit();
+	}
 
-    uint64_t *printBlockParms = kmalloc(sizeof(uint64_t) * 3);
-    printBlockParms[0] = 3;
-    printBlockParms[1] = (uint64_t)dst;
-    printBlockParms[2] = (uint64_t)blockNum;
+	blockNum = paramArr[1];
+	dst = (void *)paramArr[2];
+	ata->read_block(ata, blockNum, dst);
 
-    asm("CLI");
-    PROC_create_kthread(printBlock, printBlockParms);
-    asm("STI");
+	/* printk_info("done reading block %d, creating process to print this block now\n", blockNum); */
 
-    kexit();
+	printBlockParms = kmalloc(sizeof(uint64_t) * 3);
+	printBlockParms[0] = 3;
+	printBlockParms[1] = (uint64_t) dst;
+	printBlockParms[2] = (uint64_t) blockNum;
+
+	asm("CLI");
+	PROC_create_kthread(printBlock, printBlockParms);
+	asm("STI");
+
+	kexit();
 }
 
-void grabKeyboardInput(){
-    printk("keyboard listening process is go (PID=%d)\n", curProc->pid);
-    while(1){
-        printk("%c", KBD_read());
-    }
+void grabKeyboardInput()
+{
+	printk("keyboard listening process is go (PID=%d)\n", curProc->pid);
+	while (1) {
+		printk("%c", KBD_read());
+	}
 }
 
 //takes params uint16_t base, uint16_t master, uint8_t slave, uint8_t irq
-void initBlockDevice(void *params){
-    if(params == 0){
-        printk_err("did not pass in any parameters to init block device, nothing will happen\n");
-        kexit();
-    }
-    uint64_t *paramArr = params;
-    int arrLen = *paramArr;
-    if(arrLen - 1 != 4){
-        printk_err("[initBlockDevice]: passed in the wrong number of parameters, expected 4 and received %d\n", arrLen - 1);
-        kexit();
-    }
-    uint16_t base = paramArr[1];
-    uint16_t master = paramArr[2];
-    uint8_t slave = paramArr[3];
-    uint8_t irq = paramArr[4];
+void initBlockDevice(void *params)
+{
+	uint64_t *paramArr;
+	int arrLen;
+	uint16_t base;
+	uint16_t master;
+	uint8_t slave;
+	uint8_t irq;
 
-    ata = ata_probe(base, master, slave, irq);
-    kexit();
+	if (params == 0) {
+		printk_err
+		    ("did not pass in any parameters to init block device, nothing will happen\n");
+		kexit();
+	}
+	paramArr = params;
+	arrLen = *paramArr;
+	if (arrLen - 1 != 4) {
+		printk_err
+		    ("[initBlockDevice]: passed in the wrong number of parameters, expected 4 and received %d\n",
+		     arrLen - 1);
+		kexit();
+	}
+
+	base = paramArr[1];
+	master = paramArr[2];
+	slave = paramArr[3];
+	irq = paramArr[4];
+
+	ata = ata_probe(base, master, slave, irq);
+	kexit();
 }
 
 /* void readBlock0(){ */
@@ -163,42 +194,43 @@ void initBlockDevice(void *params){
 /*     kexit(); */
 /* } */
 
-int init_pci_devices(){
-    int num_devices_initd = 0;
-    PCIDevice *cur = pci_devices;
+int init_pci_devices()
+{
+	int num_devices_initd = 0;
+	PCIDevice *cur = pci_devices;
 
-    while(cur){
-	//printk("dev vendor = 0x%x\n", cur->vendor_id);
-	switch(cur->vendor_id){
-	case 0x10ec:
-	    //printk("found a realtek device\n");
-	    switch(cur->device_id){
-	    case 0x8139:
-	        if(!init_rt8139(cur)){
-		    num_devices_initd += 1;
+	while (cur) {
+		switch (cur->vendor_id) {
+		case 0x10ec:
+			switch (cur->device_id) {
+			case 0x8139:
+				if (!init_rt8139(cur)) {
+					num_devices_initd += 1;
+				}
+				break;
+			}
+
+			break;
 		}
-		break;
-	    }
-	    
-	    break;
+		cur = cur->next_device;
 	}
-	cur = cur->next_device;
-    }
 
-    return num_devices_initd;
+	return num_devices_initd;
 }
 
-void readBlock32(){
-    char dest[512];
-    memset(dest, 0, 512);
-    ata->read_block(ata, 32, dest);
+void readBlock32()
+{
+	char dest[512];
+	int i;
 
-    printk("done reading block 32!\n");
-    int i;
-    for(i = 0; i < 512; i += 8){
-        printk("%d] %lx\n", i, *((uint64_t*)(dest + i)));
-    }
-    kexit();
+	memset(dest, 0, 512);
+	ata->read_block(ata, 32, dest);
+
+	printk("done reading block 32!\n");
+	for (i = 0; i < 512; i += 8) {
+		printk("%d] %lx\n", i, *((uint64_t *) (dest + i)));
+	}
+	kexit();
 }
 
 /* void configure_kmain_from_env(){ */
@@ -223,86 +255,91 @@ void readBlock32(){
 /*     } */
 /* } */
 
-int kmain(void *multiboot_point, unsigned int multitest){
-  asm("cli");
+int kmain(void *multiboot_point, unsigned int multitest)
+{
+	TagStructureInfo *tagStructureInfo;
+	GenericTagHeader *curTag;
+	uint64_t ****new_page_table;
+	int num_pci_devs;
+	int enabled = 0;
 
-  //set up and test the VGA
-  VGA_clear();
-  // vgaDispCharTest();
-  // VGA_display_str("string print test\n");
+	asm("cli");
 
-  //set up the things needed for printk
-  initialize_scancodes();
-  initialize_shift_down_dict();
-  disableSerialPrinting();
+	//set up and test the VGA
+	VGA_clear();
+	// vgaDispCharTest();
+	// VGA_display_str("string print test\n");
 
-  //currently working without this, too scared to uncomment
-  // initPs2();
-  // keyboard_config();
+	//set up the things needed for printk
+	initialize_scancodes();
+	initialize_shift_down_dict();
+	disableSerialPrinting();
 
-  //initialize interrupts
-  idt_init();
-  IRQ_clear_mask(KEYBOARD_IRQ);
-  IRQ_clear_mask(SERIAL_COM1_IRQ);
-  IRQ_clear_mask(SLAVE_PIC_IRQ);
-  IRQ_clear_mask(PRIMARY_ATA_CHANNEL_IRQ);
-  // IRQ_clear_mask(SECONDARY_ATA_CHANNEL_IRQ);
+	//currently working without this, too scared to uncomment
+	// initPs2();
+	// keyboard_config();
 
-  init_kbd_state();
+	//initialize interrupts
+	idt_init();
+	IRQ_clear_mask(KEYBOARD_IRQ);
+	IRQ_clear_mask(SERIAL_COM1_IRQ);
+	IRQ_clear_mask(SLAVE_PIC_IRQ);
+	IRQ_clear_mask(PRIMARY_ATA_CHANNEL_IRQ);
+	// IRQ_clear_mask(SECONDARY_ATA_CHANNEL_IRQ);
 
-  //turn on interrupts
-  asm("sti");
+	init_kbd_state();
 
-  //initialize serial output
-  SER_init();
-  printk_rainbow("----SERIAL DEBUGGING BEGIN----\n");
-  
-  int v = 1;
+	//turn on interrupts
+	asm("sti");
 
-  char *y = (char*)&v;
+	//initialize serial output
+	SER_init();
+	printk_rainbow("----SERIAL DEBUGGING BEGIN----\n");
 
-  printk_info("%s\n",*y ? "Endianness: Little Endian" : "Endianness: Big Endian");
-  
-  //initialize the memory info datastructure
-  init_usable_segment_struct();
+	printk_info("%s\n",
+		    get_endianness() == LITTLE_ENDIAN ?
+		    "Endianness: Little Endian" : "Endianness: Big Endian");
 
-  //take the multiboot_point from entering long mode, and figure out where tags BEGIN
-  TagStructureInfo *tagStructureInfo = (TagStructureInfo*)multiboot_point;
-  printk("tagStructInfo: total_size=%u reserved=%u\n", tagStructureInfo->totalBytes, tagStructureInfo->reserved);
-  GenericTagHeader *curTag = (GenericTagHeader*)((uint64_t)tagStructureInfo + 8);
+	//initialize the memory info datastructure
+	init_usable_segment_struct();
 
-  //iterate over and parse all multiboot tags
-  while(curTag){
-    printTagInfo(curTag);
-    potentiallyUseTag(curTag);
-      curTag = getNextTag(curTag);
-  }
+	//take the multiboot_point from entering long mode, and figure out where tags BEGIN
+	tagStructureInfo = (TagStructureInfo *) multiboot_point;
+	printk("tagStructInfo: total_size=%u reserved=%u\n",
+	       tagStructureInfo->totalBytes, tagStructureInfo->reserved);
+	curTag = (GenericTagHeader *) ((uint64_t) tagStructureInfo + 8);
 
-  store_control_registers();
-  uint64_t ****new_page_table = init_page_table();
-  load_page_table((uint64_t)new_page_table);
+	//iterate over and parse all multiboot tags
+	while (curTag) {
+		printTagInfo(curTag);
+		potentiallyUseTag(curTag);
+		curTag = getNextTag(curTag);
+	}
 
-  init_kheap();
-  ata = ata_probe(0x1F0, 0x40, 0, 0x14);
+	store_control_registers();
+	new_page_table = init_page_table();
+	load_page_table((uint64_t) new_page_table);
 
-  printk_info("Searching for connected PCI devices:\n");
-  int num_pci_devs = pci_probe(&pci_devices);
-  printk_info("Found %d pci devices\n", num_pci_devs);
+	init_kheap();
+	ata = ata_probe(0x1F0, 0x40, 0, 0x14);
 
-  if(num_pci_devs){
-      init_pci_devices();
-  }
-  
-  int enabled = 0;
-  while(!enabled);
-  
-  /* uint64_t initFAT32Params[2] = {2, (uint64_t)ata}; */
-  /* PROC_create_kthread(initFAT32, initFAT32Params); */
-  
-  while(1){
-      PROC_run();
-      asm("hlt");
-  }
+	printk_info("Searching for connected PCI devices:\n");
+	num_pci_devs = pci_probe(&pci_devices);
+	printk_info("Found %d pci devices\n", num_pci_devs);
 
-  return 0;
+	if (num_pci_devs) {
+		init_pci_devices();
+	}
+
+	while (!enabled) ;
+
+	/* uint64_t initFAT32Params[2] = {2, (uint64_t)ata}; */
+	/* PROC_create_kthread(initFAT32, initFAT32Params); */
+
+	while (1) {
+		PROC_run();
+		asm("hlt");
+	}
+
+	return 0;
 }

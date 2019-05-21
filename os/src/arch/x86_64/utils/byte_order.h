@@ -6,7 +6,7 @@
 #define LITTLE_ENDIAN 1
 #define BIG_ENDIAN 2
 
-uint8_t get_endiannes();
+uint8_t get_endianness();
 
 uint16_t le16_to_cpu(uint16_t le16);
 uint32_t le32_to_cpu(uint32_t le32);

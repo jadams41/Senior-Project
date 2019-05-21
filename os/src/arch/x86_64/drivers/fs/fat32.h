@@ -3,6 +3,7 @@
 
 #include <stdint-gcc.h>
 #include "drivers/block/blockDeviceDriver.h"
+#include "vfs.h"
 
 /*** STRUCTURE OF FAT32 PARTITION ***
      __________________________________
