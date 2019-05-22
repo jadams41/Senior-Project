@@ -16,6 +16,9 @@ extern uint64_t cur_char_color;
 //main print function wrapper
 void printk(const char *fmtStr, ...);
 
+//print to string
+void sprintk(char *str, const char *fmtStr, ...); 
+
 //custom print wrappers for different output levels
 void printk_err(const char *fmtStr, ...);   //bright red
 void printk_warn(const char *fmtStr, ...);  //cyan

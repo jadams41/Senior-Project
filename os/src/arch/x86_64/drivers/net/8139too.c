@@ -1,5 +1,6 @@
 #include <stdint-gcc.h>
 #include "drivers/net/8139too.h"
+#include "drivers/net/arp/arp.h"
 #include "drivers/pci/pci.h"
 #include "drivers/memory/memoryManager.h"
 #include "drivers/interrupts/idt.h"
@@ -12,18 +13,11 @@
 static const unsigned int rtl8139_tx_config =
 	TxIFG96 | (TX_DMA_BURST << TxDMAShift) | (TX_RETRY << TxRetryShift);
 
-
-
 //todo clean this up, just using to test functionality inside of isr
 uint32_t global_rt_ioaddr = 0;
 uint64_t global_rx_buffer_virt = 0;
 uint64_t global_rx_buffer_size = 0;
 rt8139_private *global_rtl_priv = NULL;
-
-void print_mac_addr(uint8_t *mac){
-	printk("%02X:%02X:%02X:%02X:%02X:%02X",
-	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-}
 
 void wipe_dma_buffer(uint64_t virt_addr, uint64_t size){
 	uint64_t i = 0;
@@ -52,31 +46,38 @@ void print_ethertype(uint32_t ethertype){
 }
 
 void parse_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
-	uint8_t *dest_mac = eth_frame;
-	uint8_t *source_mac = eth_frame + 6;
+	/* uint8_t *dest_mac = eth_frame; */
+	/* uint8_t *source_mac = eth_frame + 6; */
 	uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12)));
-    
-	printk("****** Received Ethernet Frame ******\n");
-	printk("Total Length: %u\n", frame_size);
-    
-	printk("Dest   MAC: ");
-	print_mac_addr(dest_mac);
-	printk("\n");
 
-	printk("Source MAC: ");
-	print_mac_addr(source_mac);
-	printk("\n");
+        /* hw_addr source_hw_addr = create_hw_addr(source_mac); */
+        /* hw_addr dest_hw_addr = create_hw_addr(dest_mac); */
+
+	/* char *source_addr_str = hw_addr_to_str(source_hw_addr); */
+	/* char *dest_addr_str = hw_addr_to_str(dest_hw_addr); */
+	
+	/* printk("****** Received Ethernet Frame ******\n"); */
+	/* printk("Total Length: %u\n", frame_size); */
+    
+	/* printk("Dest MAC: %s\n", dest_addr_str); */
+	/* printk("Source MAC: %s\n", source_addr_str); */
 
 	if(ethertype_or_len < 1501){
-		printk("Data Length: %hu\n", ethertype_or_len);
+		/* printk("Data Length: %hu\n", ethertype_or_len); */
 	}
 	else {
-		printk("Ethertype: ");
-		print_ethertype(ethertype_or_len);
-		printk(" (0x%04x)\n", ethertype_or_len);
+		/* printk("Ethertype: "); */
+		/* print_ethertype(ethertype_or_len); */
+		/* printk(" (0x%04x)\n", ethertype_or_len); */
+		if(ethertype_or_len == ETHRTYPE_ARP){
+			handle_received_arp_packet(eth_frame, frame_size);
+		}
 	}
     
-	printk("*************************************\n\n");
+	/* printk("*************************************\n\n"); */
+
+	/* kfree(source_addr_str); */
+	/* kfree(dest_addr_str); */
 }
 
 /* Inform rtl8139 that packet was successfully received 
@@ -115,7 +116,7 @@ int rtl_rx_interrupt(){
 	unsigned int rx_size = 0;
 	uint32_t ring_offset;
 	uint32_t rx_status;
-	//uint8_t *eth_frame_beginning;
+	uint8_t *eth_frame_beginning;
 	
 	if(global_rtl_priv == NULL){
 		printk_err("rtl not initialized, can't receive packet\n");
@@ -179,8 +180,8 @@ int rtl_rx_interrupt(){
 
 		//handle received ethernet frame
 		//todo: currently only printing information about packet, implement logic to store received transmission in the kernel
-		//eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
-		//parse_eth_frame(eth_frame_beginning, rx_size);
+		eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
+		parse_eth_frame(eth_frame_beginning, rx_size);
 	
 		//acknowledge packet
 		rtl8139_rx_isr_ack(rt_ioaddr);
@@ -252,8 +253,8 @@ void rtl_isr(int irq, int err){
 	}
 
 	if(status & RxAckBits){
-		int received = rtl_rx_interrupt();
-		printk_info("received %d packets\n", received);		
+		rtl_rx_interrupt();
+		//printk_info("received %d packets\n", received);
 	}
 	
 	if (status & (TxOK | TxErr)) {
@@ -405,11 +406,22 @@ int init_rt8139(PCIDevice *dev) {
 	printk_info("\tperforming software reset\n");
 	rtl8139_chip_reset(rt_ioaddr);
 
-	priv->mac_addr = 0;
-	priv->mac_addr += le32_to_cpu(inl(rt_ioaddr + MAC0));
-	priv->mac_addr <<= 16;
-	priv->mac_addr += le32_to_cpu(inl(rt_ioaddr + MAC0 + 4));
+	uint64_t mac_addr_int = 0;
+        mac_addr_int += le32_to_cpu(inl(rt_ioaddr + MAC0));
+        mac_addr_int <<= 16;
+        mac_addr_int += le32_to_cpu(inl(rt_ioaddr + MAC0 + 4));
 
+	priv->mac_addr = create_hw_addr((uint8_t*)&mac_addr_int);
+
+	//todo figure out how to actually set this up
+        priv->ipv4_addr = 192;
+	priv->ipv4_addr <<= 8;
+        priv->ipv4_addr += 168;
+        priv->ipv4_addr <<= 8;
+        priv->ipv4_addr += 122;
+        priv->ipv4_addr <<= 8;
+        priv->ipv4_addr += 18;
+	
 	/* unlock Config[01234] and BMCR register writes */
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Unlock);
     

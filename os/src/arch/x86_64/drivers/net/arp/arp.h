@@ -1,6 +1,17 @@
 #ifndef ARP
 #define ARP
 
+#include "drivers/net/ethernet/ethernet.h"
+
+typedef struct arp_table_entry arp_table_entry;
+
+struct arp_table_entry {
+	uint32_t        ip_addr;
+	uint16_t        hw_type;
+	hw_addr         hw_addr;
+	arp_table_entry *next;
+};
+
 typedef struct {
 	uint16_t hw_type;       /* Hardware Type - specifies the type of 
 				   hardware used for the local network 
@@ -34,8 +45,10 @@ typedef struct {
 /* } __attribute__ ((packed)) arp_packet_ipv4; */
 
 /**** acessible functions ****/
-int create_ipv4_arp_request(uint32_t my_ipv4, uint8_t *my_mac, uint32_t target_ipv4, uint8_t **packet_return);
-int create_ipv4_arp_reply(uint32_t my_ipv4, uint8_t *my_mac, uint32_t target_ipv4, uint8_t *target_mac, uint8_t **packet_return);
+int create_ipv4_arp_request(uint32_t my_ipv4, uint32_t target_ipv4, uint8_t **packet_return);
+int create_ipv4_arp_reply(uint32_t my_ipv4, hw_addr my_mac, uint32_t target_ipv4, hw_addr target_mac, uint8_t **packet_return);
+
+void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len);
 
 /**** Allowed values for different fields in the packet ****/
 /* NOTE: taken from http://www.tcpipguide.com/free/t_ARPMessageFormat.htm */

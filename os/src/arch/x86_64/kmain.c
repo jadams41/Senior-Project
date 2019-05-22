@@ -258,8 +258,8 @@ void readBlock32()
 /* } */
 
 void send_test_ethernet_frame(){
-	uint8_t dest_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	uint8_t src_mac[6]  = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+        hw_addr dest_mac = {.bytes={0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
+	hw_addr src_mac  = {.bytes={0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA}};
 	uint16_t ethertype = ETHRTYPE_ARP;
 
 	uint8_t data[28] = {
@@ -330,7 +330,7 @@ void send_test_arp_request(){
 	my_ipv4 <<= 8;
 	my_ipv4 += 16;
 
-	uint8_t my_mac[6] = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+        /* hw_addr my_mac = {.bytes={0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA}}; */
 
 	uint32_t target_ipv4 = 192;
 	target_ipv4 <<= 8;
@@ -340,7 +340,7 @@ void send_test_arp_request(){
 	target_ipv4 <<= 8;
 	target_ipv4 += 1;
 	
-        arp_request_frame_length = create_ipv4_arp_request(my_ipv4, my_mac, target_ipv4, &arp_request_frame);
+        arp_request_frame_length = create_ipv4_arp_request(my_ipv4, target_ipv4, &arp_request_frame);
 
 	rtl8139_transmit_packet(arp_request_frame, arp_request_frame_length);
 }
@@ -357,7 +357,7 @@ void send_test_arp_reply(){
 	my_ipv4 <<= 8;
 	my_ipv4 += 16;
 
-	uint8_t my_mac[6] = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+        hw_addr my_mac = {.bytes={0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA}};
 	
 	uint32_t target_ipv4 = 192;
 	target_ipv4 <<= 8;
@@ -367,7 +367,7 @@ void send_test_arp_reply(){
 	target_ipv4 <<= 8;
 	target_ipv4 += 1;
 
-	uint8_t target_mac[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73};
+	hw_addr target_mac = {.bytes={0x52, 0x54, 0x00, 0x60, 0x7c, 0x73}};
 	
         arp_reply_frame_length = create_ipv4_arp_reply(my_ipv4, my_mac, target_ipv4, target_mac, &arp_reply_frame);
 

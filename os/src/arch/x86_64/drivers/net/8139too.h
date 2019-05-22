@@ -2,6 +2,7 @@
 #define _8139TOO
 
 #include "drivers/pci/pci.h"
+#include "drivers/net/ethernet/ethernet.h"
 
 #define NUM_TX_DESC 4
 #define MAX_ETH_FRAME_SIZE 1792
@@ -28,8 +29,9 @@ typedef struct rt8139_private {
 	PCIDevice *dev;
 
 	/* miscellaneous information */
-        uint64_t mac_addr; //NOTE: the mac address is only going to be six bytes
-
+        hw_addr mac_addr; //NOTE: the mac address is only going to be six bytes
+	uint32_t ipv4_addr;
+	
 	/* rx ring-buffer information */
 	uint64_t rx_buf_virt;       // virtual memory address of rx buffer (used by kernel)
 	uint32_t rx_buf_phys;       // physical memory address of rx buffer (used by rtl8139 when performing dma)
