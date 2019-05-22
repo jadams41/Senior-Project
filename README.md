@@ -107,36 +107,45 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
             - [X] Verify that frame's header information and data are consistent (when received on host).
   3. **Build Network Stack**
       - [X] Link Layer:
-		 - [ ] Ethernet
-			- [ ] Discover and store interface's MAC Address
-			- [ ] Receive and parse Ethernet frames (test with `arping` verify with `wireshark` running on bridge interface)
-			- [ ] Create and send Ethernet frames (test by sending broadcast frame, verify packet validity with `wireshark`)
-		 - [ ] ARP
-		    - [ ] Create ARP infrastructure
-				- [ ] Structs for representing/extracting info/creating ARP packets
-				- [ ] Create primitive ARP table for keeping track of received ARP traffic
-			- [ ] Test ARP Infrastructure
-				- [ ] Receive and correctly parse ARP traffic (test with `arping -I <bridge_iface> -b <ip_on_bridge_subnet>` and verify with `wireshark` running on bridge interface connected to os)
-				- [ ] Send ARP traffic (both `ARP_REQUEST` and `ARP_REPLY`)
-					- [ ] Verify that sent packets valid (by running `wireshark` on bridge interface connected to the os).
-					- [ ] `ARP_REQUEST` the bridge interface's IP address and make sure `ARP_REPLY` is received from bridge interface.
-				- [ ] Flush out desired kernel ARP logic:
-					- [ ] Update `arp_table` when received ARP traffic contains new/updated `ipv4->mac_addr` mapping.
-					- [ ] Handle all received ARP traffic automatically:
-						- [ ] Upon receiving `ARP_REQUEST` for os's (mock) ipv4, create and send correct `ARP_REPLY` with our information. Verify by:
-							1. `arping` for os's mock ip
-							2. ensuring that the os receives/handles the `ARP_REQUEST` and creates+sends `ARP_REPLY` back.
-							3. Seeing the reply is received by `arping`
-							4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
+         - [X] Ethernet
+	    - [X] Discover and store interface's MAC Address
+	    - [X] Receive and parse Ethernet frames (test with `arping` verify with `wireshark` running on bridge interface)
+	       - [X] Create and send Ethernet frames (test by sending broadcast frame, verify packet validity with `wireshark`)
+         - [X] ARP
+	    - [X] Create ARP infrastructure
+	       - [X] Structs for representing/extracting info/creating ARP packets
+	       - [X] Create primitive ARP table for keeping track of received ARP traffic
+               - [X] Test ARP Infrastructure
+	          - [X] Receive and correctly parse ARP traffic (test with `arping -I <bridge_iface> -b <ip_on_bridge_subnet>` and verify with `wireshark` running on bridge interface connected to os)
+		  - [X] Send ARP traffic (both `ARP_REQUEST` and `ARP_REPLY`)
+		     - [X] Verify that sent packets valid (by running `wireshark` on bridge interface connected to the os).
+		     - [X] `ARP_REQUEST` the bridge interface's IP address and make sure `ARP_REPLY` is received from bridge interface.
+	   - [X] Flush out desired kernel ARP logic:
+	      - [X] Update `arp_table` when received ARP traffic contains new/updated `ipv4->mac_addr` mapping.
+              - [X] Handle all received ARP traffic automatically:
+	      - [X] Upon receiving `ARP_REQUEST` for os's (mock) ipv4, create and send correct `ARP_REPLY` with our information. Verify by:
+                 1. `arping` for os's mock ip
+                 2. ensuring that the os receives/handles the `ARP_REQUEST` and creates+sends `ARP_REPLY` back.
+                 3. Seeing the reply is received by `arping`
+                 4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
       - [ ] Internet Layer
-		- [ ] IPv4
-		- [ ] ICMP
-			- [ ] OS recognizes receives and recognizes `ping` traffic.
-			- [ ] OS can send critical `ICMP` requests.
-			- [ ] Flush out desired kernel `ICMP` logic:
-			
-      - [ ] Layer 3: Send and receive IP packets across networks.
-      - [ ] Layer 4: Communicate with remote device via TCP.
+         - [ ] IPv4
+            - [ ] Create Internet Protocol infrastructure:
+            - [ ] Create more robust network device infrastructure and data structures (like Linux's `net_device`) for configuring/representing/storing IP information.
+            - [ ] Structs+Functions for representing/parsing/creating IP packets.
+            - [ ] Send and receive/parse mock IP traffic (maybe use `ICMP` or `UDP` "traffic" for this).
+            - [ ] *Figure out what kernel data structures are needed for IP layer*
+        - [ ] ICMP
+           - [ ] OS recognizes receives and recognizes `ping` traffic.
+           - [ ] OS can send critical `ICMP` requests.
+           - [ ] Flush out desired kernel `ICMP` logic:
+              - [ ] OS automatically handles all incoming `ICMP traffic
+     - [ ] Transport Layer
+        - [ ] UDP
+        - [ ] TCP
+     - [ ] Application Layer
+        - DHCP
+        - HTTP
 ---------
 
 #### _Potential Future Milestones_
