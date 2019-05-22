@@ -3,18 +3,28 @@
 
 #include <stdint-gcc.h>
 
+//relevant external assembly functions
 extern void halt_wrapper();
 extern void VGA_clear();
 extern void VGA_display_char(char);
 extern void VGA_display_str(const char *);
+
+/** relevant external assembly variables **/
+//controls the character color codes that are added to the VGA buffer, also keeps track of 
 extern uint64_t cur_char_color;
 
+//main print function wrapper
 void printk(const char *fmtStr, ...);
-void printk_err(const char *fmtStr, ...);
-void printk_warn(const char *fmtStr, ...);
-void printk_info(const char *fmtStr, ...);
-void printk_dir(const char *fmtStr, ...);
-void printk_rainbow(const char *fmtStr, ...);
+
+//custom print wrappers for different output levels
+void printk_err(const char *fmtStr, ...);   //bright red
+void printk_warn(const char *fmtStr, ...);  //cyan
+void printk_info(const char *fmtStr, ...);  //bright green
+void printk_debug(const char *fmtStr, ...); //bright magenta
+
+//custom print wrappers for particular use cases
+void printk_dir(const char *fmtStr, ...); //fs directory print
+void printk_rainbow(const char *fmtStr, ...); //having fun (this function is also garbage)
 
 void vgaDispCharTest();
 void printkTest();

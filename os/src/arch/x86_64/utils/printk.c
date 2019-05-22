@@ -548,38 +548,91 @@ void printk_err(const char *fmtStr, ...){
 
 void printk_warn(const char *fmtStr, ...){
     va_list args;
+    char color;
+    char back;
     va_start(args, fmtStr);
-    char color = getColor(), back = getBackgroundColor();
+
+    //save current colors (so we can restore after we warning print)
+    color = getColor();
+    back = getBackgroundColor();
+
+    //set warning print color
     setColor(VGA_CYAN);
+    
     printk("[WARN]: ");
     printk_var(fmtStr, args);
+
+    //restore previous colors
     setColor(color);
     setBackgroundColor(back);
 }
 
 void printk_info(const char *fmtStr, ...){
     va_list args;
+    char color;
+    char back;
+    
     va_start(args, fmtStr);
-    char color = getColor(), back = getBackgroundColor();
+
+    //save current colors (so we can restore after we info print)
+    color = getColor();
+    back = getBackgroundColor();
+
+    //set info print color
     setColor(VGA_BRIGHT_GREEN);
+
     printk("[INFO]: ");
     printk_var(fmtStr, args);
+
+    //restore previous colors
     setColor(color);
     setBackgroundColor(back);
 }
 
-/* What's the point of building an operating system if you can't have a little bit of fun? */
-void printk_rainbow(const char *fmtStr, ...){
+void printk_debug(const char *fmtStr, ...){
     va_list args;
+    char color;
+    char back;
+
     va_start(args, fmtStr);
 
-    char color = getColor(), back = getBackgroundColor();
+    //save current colors (so we can restore after we debug print)
+    color = getColor();
+    back = getBackgroundColor();
+
+    //set debug print color
+    setColor(VGA_BRIGHT_MAGENTA);
+
+    printk("[DEBUG]: ");
+    printk_var(fmtStr, args);
+
+    //restore previous colors
+    setColor(color);
+    setBackgroundColor(back);
+}
+
+/* What's the point of writing an operating system if you can't have a little bit of fun? */
+void printk_rainbow(const char *fmtStr, ...){
+    va_list args;
+    char color;
+    char back;
+    
+    va_start(args, fmtStr);
+
+    //save current colors (so we can restore after we rainbow print
+    color = getColor();
+    back = getBackgroundColor();
+
+    //set rainbow print global flag
     print_rainbow_mode = 1;
     
     printk_var(fmtStr, args);
 
+    //restore previous colors
     setColor(color);
     setBackgroundColor(back);
+
+    //disable rainbow print mode
     print_rainbow_mode = 0;
 }
 
