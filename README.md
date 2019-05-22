@@ -83,17 +83,17 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
 ---------
 
 #### Milestone 2: *Implementation of Network Stack*
-  1. **Develop Peripheral Component Interconnect (`PCI`) driver _(Needed to discover, configure, and interact with Network Interface Card)_**
-      - [X] Research and document relevant PCI functionality and control.
+1. **Develop Peripheral Component Interconnect (`PCI`) driver _(Needed to discover, configure, and interact with Network Interface Card)_**
+   - [X] Research and document relevant PCI functionality and control.
       - [X] Implement basic PCI driver (capable of reading from and writing to PCI configuration space).
       - [X] Implement `pci_probe` (discovery and handling of all devices connected to PCI bus):
          - [X] Detect all devices connected to the PCI bus.
          - [X] Develop super structure to represent PCI device (`PCIDevice`) with child structures to handle different types of PCI devices. Access to PCI control should be handled through function pointers set in super `PCIDevice` structure.
          - [X] Integrate functionality: discover all connected devices, store relevant information in `PCIDevice`s, return list of discovered `PCIDevice`s.
-  2. **Implement Network Interface Card (`NIC`) driver**
-      - [X] Research and document different NIC models.
+2. **Implement Network Interface Card (`NIC`) driver**
+   - [X] Research and document different NIC models.
       - [X] Choose initial NIC to develop driver for and document rationale.
-      - [ ] Implement primitive driver functionality:
+      - [X] Implement primitive driver functionality:
          - [X] NIC initalization (utilizing pci control in `PCIDevice` struct returned from `pci_probe`)
          - [X] Basic implementation of asynchronous NIC control (transmitting and receiving packets).
          - [X] Enable NIC's interrupts and install ISRs which use asynchronous NIC control functionality.
@@ -105,38 +105,55 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
          - [X] TEST: Guest VM sends ethernet frame to host:
             - [X] Verify that ethernet frame sent from guest is received on the host VM.
             - [X] Verify that frame's header information and data are consistent (when received on host).
-  3. **Build Network Stack**
-      - [X] Link Layer:
-		 - [ ] Ethernet
-			- [ ] Discover and store interface's MAC Address
-			- [ ] Receive and parse Ethernet frames (test with `arping` verify with `wireshark` running on bridge interface)
-			- [ ] Create and send Ethernet frames (test by sending broadcast frame, verify packet validity with `wireshark`)
-		 - [ ] ARP
-		    - [ ] Create ARP infrastructure
-				- [ ] Structs for representing/extracting info/creating ARP packets
-				- [ ] Create primitive ARP table for keeping track of received ARP traffic
-			- [ ] Test ARP Infrastructure
-				- [ ] Receive and correctly parse ARP traffic (test with `arping -I <bridge_iface> -b <ip_on_bridge_subnet>` and verify with `wireshark` running on bridge interface connected to os)
-				- [ ] Send ARP traffic (both `ARP_REQUEST` and `ARP_REPLY`)
-					- [ ] Verify that sent packets valid (by running `wireshark` on bridge interface connected to the os).
-					- [ ] `ARP_REQUEST` the bridge interface's IP address and make sure `ARP_REPLY` is received from bridge interface.
-				- [ ] Flush out desired kernel ARP logic:
-					- [ ] Update `arp_table` when received ARP traffic contains new/updated `ipv4->mac_addr` mapping.
-					- [ ] Handle all received ARP traffic automatically:
-						- [ ] Upon receiving `ARP_REQUEST` for os's (mock) ipv4, create and send correct `ARP_REPLY` with our information. Verify by:
-							1. `arping` for os's mock ip
-							2. ensuring that the os receives/handles the `ARP_REQUEST` and creates+sends `ARP_REPLY` back.
-							3. Seeing the reply is received by `arping`
-							4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
-      - [ ] Internet Layer
-		- [ ] IPv4
-		- [ ] ICMP
-			- [ ] OS recognizes receives and recognizes `ping` traffic.
-			- [ ] OS can send critical `ICMP` requests.
-			- [ ] Flush out desired kernel `ICMP` logic:
-			
-      - [ ] Layer 3: Send and receive IP packets across networks.
-      - [ ] Layer 4: Communicate with remote device via TCP.
+3. **Build Network Stack**
+   - [X] **Link Layer**:
+      - [X] `Ethernet`
+         - [X] Discover and store interface's MAC Address
+         - [X] Receive and parse Ethernet frames (test with `arping` verify with `wireshark` running on bridge interface)
+         - [X] Create and send Ethernet frames (test by sending broadcast frame, verify packet validity with `wireshark`)
+      - [X] `ARP`: _Address Resolution Protocol_
+         - [X] Create `ARP` infrastructure
+            - [X] Structs for representing/extracting info/creating ARP packets
+            - [X] Create primitive ARP table for keeping track of received ARP traffic
+         - [X] Test ARP Infrastructure
+            - [X] Receive and correctly parse ARP traffic (test with `arping -I <bridge_iface> -b <ip_on_bridge_subnet>` and verify with `wireshark` running on bridge interface connected to os)
+         - [X] Send test ARP traffic (both `ARP_REQUEST` and `ARP_REPLY`)
+             - [X] Verify that sent packets valid (by running `wireshark` on bridge interface connected to the os).
+             - [X] `ARP_REQUEST` the bridge interface's IP address and make sure `ARP_REPLY` is received from bridge interface.
+         - [X] Flush out desired kernel ARP functionality:
+            - [X] Update `arp_table` when received ARP traffic contains new/updated `ipv4->mac_addr` mapping.
+            - [X] Handle all received ARP traffic automatically:
+            - [X] Upon receiving `ARP_REQUEST` for os's (mock) ipv4, create and send correct `ARP_REPLY` with our information. Verify by:
+               1. `arping` for os's mock ip
+               2. ensuring that the os receives/handles the `ARP_REQUEST` and creates+sends `ARP_REPLY` back.
+               3. Seeing the reply is received by `arping`
+               4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
+   - [ ] **Internet Layer**
+      - [ ] `IPv4`: _Internet Protocol Version 4_
+         - [ ] Create Internet Protocol infrastructure:
+            - [ ] Create more robust network device infrastructure and data structures (like Linux's `net_device`) for configuring/representing/storing IP information.
+            - [ ] Structs+Functions for representing/parsing/creating IP packets.
+         - [ ] Send and receive/parse mock IP traffic (maybe use `ICMP` or `UDP` "traffic" for this).
+         - [ ] *Figure out what kernel data structures are needed for IP layer*
+      - [ ] `ICMP`: _Internet Control Message Protocol_
+         - [ ] Create ICMP infrastructure:
+            - [ ] OS recognizes and handles `ICMP` packets (probably only need control messages associated with `ping`).
+            - [ ] OS can send relevant `ICMP` requests (probably only need to support control messages associated with `ping`).
+         - [ ] Flush out desired kernel `ICMP` functionality:
+            - [ ] OS automatically handles all incoming `ICMP` traffic
+               - [ ] OS extracts and uses relevant information from received `ICMP` traffic upon arrival.
+               - [ ] OS automatically replies appropriately to all received `ICMP` requests (that are supported).
+            - [ ] "Userspace" accessible `ping` functionality (can probably be done in a kernel thread):
+               - [ ] As similar as possible to running `ping` on linux command line
+               - [ ] Outputs same way as linux `ping` utility (to make testing/validating easier).
+   - [ ] **Transport Layer**
+      - [ ] `UDP`: _Universal Datagram Protocol_
+      - [ ] `TCP`: _Transmission Control Protocol_
+   - [ ] **Application Layer**
+      - [ ] `DHCP`: _Dynamic Host Configuration Protocol_
+         - *NOTE: rush to get here ASAP (build only what is needed in order to get DHCP DISCOVER->REQUEST functionality working in order to support dynamic IP addressineg of the OS).*
+      - [ ] `HTTP`: _HyperText Transmission Protocol_
+         - *NOTE: Final objective for Milestone 3*
 ---------
 
 #### _Potential Future Milestones_
