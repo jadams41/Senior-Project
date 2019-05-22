@@ -49,6 +49,10 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
 10. Initialize found Network Interface Controller.
    1. Process and modify relevant information stored in PCI configuration space.
 
+##### Demos of Current Functionality:
+![](demos/mock_demo1.gif)
+![](demos/mock_demo2.gif)
+
 ---------
 
 ## Project Planning
