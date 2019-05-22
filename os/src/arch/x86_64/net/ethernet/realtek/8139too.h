@@ -2,7 +2,7 @@
 #define _8139TOO
 
 #include "drivers/pci/pci.h"
-#include "drivers/net/ethernet/ethernet.h"
+#include "net/ethernet/ethernet.h"
 
 #define NUM_TX_DESC 4
 #define MAX_ETH_FRAME_SIZE 1792

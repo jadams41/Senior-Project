@@ -1,13 +1,13 @@
 #include <stdint-gcc.h>
-#include "drivers/net/8139too.h"
-#include "drivers/net/arp/arp.h"
-#include "drivers/pci/pci.h"
-#include "drivers/memory/memoryManager.h"
 #include "drivers/interrupts/idt.h"
+#include "drivers/memory/memoryManager.h"
+#include "drivers/pci/pci.h"
+#include "net/arp/arp.h"
+#include "net/ethernet/ethernet.h"
+#include "net/ethernet/realtek/8139too.h"
+#include "utils/byte_order.h"
 #include "utils/printk.h"
 #include "utils/utils.h"
-#include "utils/byte_order.h"
-#include "ethernet/ethernet.h"
 
 /* RealTek RTL-8139 Fast Ethernet driver */
 static const unsigned int rtl8139_tx_config =
@@ -414,13 +414,13 @@ int init_rt8139(PCIDevice *dev) {
 	priv->mac_addr = create_hw_addr((uint8_t*)&mac_addr_int);
 
 	//todo figure out how to actually set this up
-        priv->ipv4_addr = 192;
+        priv->ipv4_addr = 172;
 	priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 168;
+        priv->ipv4_addr += 16;
         priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 122;
+        priv->ipv4_addr += 210;
         priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 18;
+        priv->ipv4_addr += 183;
 	
 	/* unlock Config[01234] and BMCR register writes */
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Unlock);
@@ -625,7 +625,7 @@ int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
 
 	priv->cur_tx += 1;
 
-	printk_info("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
+	printk_debug("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
 	
 	//enable interrupts
 	asm("STI");

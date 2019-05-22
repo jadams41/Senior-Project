@@ -1,7 +1,7 @@
 #include <stdint-gcc.h>
 #include "arp.h"
-#include "drivers/net/8139too.h"
-#include "drivers/net/ethernet/ethernet.h"
+#include "net/ethernet/realtek/8139too.h"
+#include "net/ethernet/ethernet.h"
 #include "drivers/memory/memoryManager.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
@@ -96,25 +96,25 @@ int create_ipv4_arp_reply(uint32_t my_ipv4, hw_addr my_mac, uint32_t target_ipv4
 }
 
 void print_arp_table(){
-	arp_table_entry *cur = arp_table;
-	printk("Current arp table:\n");
-	printk("%25s%8s%20s%6s%16s%6s\n", "Address", "HWtype", "HWaddress", "Flags", "Mask", "Iface");
+	/* arp_table_entry *cur = arp_table; */
+	/* printk("Current arp table:\n"); */
+	/* printk("%25s%8s%20s%6s%16s%6s\n", "Address", "HWtype", "HWaddress", "Flags", "Mask", "Iface"); */
 
-	while(cur){
-		uint8_t ipv4_addr1 = (cur->ip_addr >> 24) & 0xFF000000;
-		uint8_t ipv4_addr2 = (cur->ip_addr >> 16) & 0x00FF0000;
-		uint8_t ipv4_addr3 = (cur->ip_addr >> 8) & 0x0000FF00;
-		uint8_t ipv4_addr4 = cur->ip_addr & 0x000000FF;
+	/* while(cur){ */
+	/* 	uint8_t ipv4_addr1 = (cur->ip_addr >> 24) & 0xFF000000; */
+	/* 	uint8_t ipv4_addr2 = (cur->ip_addr >> 16) & 0x00FF0000; */
+	/* 	uint8_t ipv4_addr3 = (cur->ip_addr >> 8) & 0x0000FF00; */
+	/* 	uint8_t ipv4_addr4 = cur->ip_addr & 0x000000FF; */
 
-		char ip_addr_str[16];
-	        sprintk(ip_addr_str, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4);
+	/* 	char ip_addr_str[16]; */
+	/*         sprintk(ip_addr_str, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4); */
 
-		char *mac_addr_str = hw_addr_to_str(cur->hw_addr);
-		printk("%25s%8s%20s%6s%16s%6s\n", ip_addr_str, ((cur->hw_type == ARP_HW_ETHER) ? "ether" : " "), mac_addr_str, " ", " ", " ",  " ");
+	/* 	char *mac_addr_str = hw_addr_to_str(cur->hw_addr); */
+	/* 	//printk("%25s%8s%20s%6s%16s%6s\n", ip_addr_str, ((cur->hw_type == ARP_HW_ETHER) ? "ether" : " "), mac_addr_str, " ", " ", " ",  " "); */
 
-		kfree(mac_addr_str);
-		cur = cur->next;
-	}
+	/* 	kfree(mac_addr_str); */
+	/* 	cur = cur->next; */
+	/* } */
 }
 
 void print_ipv4(uint32_t ipv4){
@@ -146,7 +146,7 @@ int add_arp_table_entry(uint32_t ip_addr, uint16_t hw_type, hw_addr hw_addr){
 				char ip_addr_str[16];
 				sprintk(ip_addr_str, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4);
 				
-				printk_info("updated arp table entry for %s\n", ip_addr_str);
+				//printk_info("updated arp table entry for %s\n", ip_addr_str);
 				print_arp_table();
 				return 2;
 			}
@@ -178,7 +178,7 @@ int add_arp_table_entry(uint32_t ip_addr, uint16_t hw_type, hw_addr hw_addr){
 	char ip_addr_str[16];
 	sprintk(ip_addr_str, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4);
 	
-	printk_info("added arp table entry for %s\n", ip_addr_str);
+	//printk_info("added arp table entry for %s\n", ip_addr_str);
 	print_arp_table();
 	return 1;
 }
@@ -188,10 +188,10 @@ void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
         eth_frame_header *frame_head = (eth_frame_header*)frame;
 	arp_packet_base  *arp_packet = (arp_packet_base*)(frame + sizeof(eth_frame_header));
 
-	hw_addr dest = create_hw_addr(frame_head->dest_mac);
+	//hw_addr dest = create_hw_addr(frame_head->dest_mac);
 	hw_addr src = create_hw_addr(frame_head->src_mac);
 
-	char *dest_addr_str = hw_addr_to_str(dest);
+	/* char *dest_addr_str = hw_addr_to_str(dest); */
 	char *src_addr_str = hw_addr_to_str(src);
 
 	uint16_t hw_type = ntohs(arp_packet->hw_type);
@@ -217,11 +217,11 @@ void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
 			sender_ipv4 = ntohl(sender_ipv4);
 			target_ipv4 = ntohl(target_ipv4);
 
-			printk_info("\tsent from ");
-			print_ipv4(sender_ipv4);
-			printk("| lookng for ");
-			print_ipv4(target_ipv4);
-			printk("\n");
+			//printk_info("\tsent from ");
+			//print_ipv4(sender_ipv4);
+			//printk("| lookng for ");
+			//print_ipv4(target_ipv4);
+			//printk("\n");
 			
 			//add the information from the request to the arp table
 			add_arp_table_entry(sender_ipv4, hw_type, sender_mac);
@@ -231,18 +231,18 @@ void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
 			        uint8_t *reply_packet;
 				uint8_t packet_len = create_ipv4_arp_reply(global_rtl_priv->ipv4_addr, global_rtl_priv->mac_addr, sender_ipv4, sender_mac, &reply_packet);
 
-				printk_info("arp request was for us, sending arp reply with our ip address\n");
+				//printk_info("arp request was for us, sending arp reply with our ip address\n");
 				rtl8139_transmit_packet(reply_packet, packet_len);
 			}
 		}
 		else {
-			printk_warn("received arp request with proto address length = %hu. Don't know how to handle this yet\n", proto_addr_len);
+			//printk_warn("received arp request with proto address length = %hu. Don't know how to handle this yet\n", proto_addr_len);
 			return;
 		}
 		break;
 	case ARP_OP_REPLY:
-	        printk_info("Received ARP REPLY from %s\n", src_addr_str);
-		printk_info("\tsent to %s\n", dest_addr_str);
+	        //printk_info("Received ARP REPLY from %s\n", src_addr_str);
+		//printk_info("\tsent to %s\n", dest_addr_str);
 
 		if(proto_addr_len == ARP_PROTO_ADDR_LEN_IPV4){
 			hw_addr sender_mac = create_hw_addr((uint8_t*)(arp_packet + 1));
@@ -254,7 +254,7 @@ void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
 
 		}
 		else {
-			printk_warn("received arp request with proto address length = %hu. Don't know how to handle this yet\n", proto_addr_len);
+			//printk_warn("received arp request with proto address length = %hu. Don't know how to handle this yet\n", proto_addr_len);
 			return;
 		}
 		break;

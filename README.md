@@ -97,17 +97,44 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
          - [X] NIC initalization (utilizing pci control in `PCIDevice` struct returned from `pci_probe`)
          - [X] Basic implementation of asynchronous NIC control (transmitting and receiving packets).
          - [X] Enable NIC's interrupts and install ISRs which use asynchronous NIC control functionality.
-      - [ ] Test basic NIC functionality (transmit and receive ethernet frames):
+      - [X] Test basic NIC functionality (transmit and receive ethernet frames):
          - [X] Research and document strategies for networking between `qemu` VM's and host machine.
          - [X] TEST: Guest receives ethernet frame from host VM:
             - [X] Verify that interrupt fires after frame is sent from host -> VM
             - [X] Verify that frame's header information and data can be properly extracted in VM.
-         - [ ] TEST: Guest VM sends ethernet frame to host:
-            - [ ] Verify that ethernet frame sent from guest is received on the host VM.
-            - [ ] Verify that frame's header information and data are consistent (when received on host).
+         - [X] TEST: Guest VM sends ethernet frame to host:
+            - [X] Verify that ethernet frame sent from guest is received on the host VM.
+            - [X] Verify that frame's header information and data are consistent (when received on host).
   3. **Build Network Stack**
-      - [ ] Layer 1: NIC configured and functions when interacting physically.
-      - [ ] Layer 2: Send and receive ethernet frames on local subnet.
+      - [X] Link Layer:
+		 - [ ] Ethernet
+			- [ ] Discover and store interface's MAC Address
+			- [ ] Receive and parse Ethernet frames (test with `arping` verify with `wireshark` running on bridge interface)
+			- [ ] Create and send Ethernet frames (test by sending broadcast frame, verify packet validity with `wireshark`)
+		 - [ ] ARP
+		    - [ ] Create ARP infrastructure
+				- [ ] Structs for representing/extracting info/creating ARP packets
+				- [ ] Create primitive ARP table for keeping track of received ARP traffic
+			- [ ] Test ARP Infrastructure
+				- [ ] Receive and correctly parse ARP traffic (test with `arping -I <bridge_iface> -b <ip_on_bridge_subnet>` and verify with `wireshark` running on bridge interface connected to os)
+				- [ ] Send ARP traffic (both `ARP_REQUEST` and `ARP_REPLY`)
+					- [ ] Verify that sent packets valid (by running `wireshark` on bridge interface connected to the os).
+					- [ ] `ARP_REQUEST` the bridge interface's IP address and make sure `ARP_REPLY` is received from bridge interface.
+				- [ ] Flush out desired kernel ARP logic:
+					- [ ] Update `arp_table` when received ARP traffic contains new/updated `ipv4->mac_addr` mapping.
+					- [ ] Handle all received ARP traffic automatically:
+						- [ ] Upon receiving `ARP_REQUEST` for os's (mock) ipv4, create and send correct `ARP_REPLY` with our information. Verify by:
+							1. `arping` for os's mock ip
+							2. ensuring that the os receives/handles the `ARP_REQUEST` and creates+sends `ARP_REPLY` back.
+							3. Seeing the reply is received by `arping`
+							4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
+      - [ ] Internet Layer
+		- [ ] IPv4
+		- [ ] ICMP
+			- [ ] OS recognizes receives and recognizes `ping` traffic.
+			- [ ] OS can send critical `ICMP` requests.
+			- [ ] Flush out desired kernel `ICMP` logic:
+			
       - [ ] Layer 3: Send and receive IP packets across networks.
       - [ ] Layer 4: Communicate with remote device via TCP.
 ---------

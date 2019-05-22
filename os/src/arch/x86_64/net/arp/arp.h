@@ -1,7 +1,7 @@
 #ifndef ARP
 #define ARP
 
-#include "drivers/net/ethernet/ethernet.h"
+#include "net/ethernet/ethernet.h"
 
 typedef struct arp_table_entry arp_table_entry;
 
