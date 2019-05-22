@@ -50,8 +50,14 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
    1. Process and modify relevant information stored in PCI configuration space.
 
 ##### Demos of Current Functionality:
-![](demos/mock_demo1.gif)
-![](demos/mock_demo2.gif)
+###### Receiving Network traffic
+![](demos/receiving_internet_traffic.gif)
+
+###### Receiving and Parsing ARP packets
+*TODO: Add demo of this functionality*
+
+###### Received ARP Packet Handling Functionality
+*TODO: Add demo of this functionality*
 
 ---------
 
