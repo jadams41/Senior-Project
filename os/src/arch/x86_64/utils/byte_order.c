@@ -131,6 +131,7 @@ uint16_t htons(uint16_t hostshort){
     }
 
     uint8_t *le_byte_ptr = (uint8_t*)&hostshort;
+
     uint16_t to_return = le_byte_ptr[0];
     to_return <<= 8;
     to_return += le_byte_ptr[1];
@@ -145,13 +146,13 @@ uint32_t htonl(uint32_t hostlong){
 
     uint8_t *le_byte_ptr = (uint8_t*)&hostlong;
 
-    uint16_t to_return = le_byte_ptr[0];
+    uint32_t to_return = le_byte_ptr[0];
     to_return <<= 8;
     to_return += le_byte_ptr[1];
     to_return <<= 8;
     to_return += le_byte_ptr[2];
     to_return <<= 8;
-    to_return += le_byte_ptr[3]; 
+    to_return += le_byte_ptr[3];
 
     return to_return;
 }
@@ -162,6 +163,7 @@ uint16_t ntohs(uint16_t netshort){
     }
 
     uint8_t *be_byte_ptr = (uint8_t*)&netshort;
+
     uint16_t to_return = be_byte_ptr[0];
     to_return <<= 8;
     to_return += be_byte_ptr[1];
@@ -169,13 +171,14 @@ uint16_t ntohs(uint16_t netshort){
     return to_return;    
 }
 
-uint16_t ntohl(uint32_t netlong){
+uint32_t ntohl(uint32_t netlong){
     if(get_endianness() == BIG_ENDIAN){
 	return netlong;
     }
 
     uint8_t *be_byte_ptr = (uint8_t*)&netlong;
-    uint16_t to_return = be_byte_ptr[0];
+
+    uint32_t to_return = be_byte_ptr[0];
     to_return <<= 8;
     to_return += be_byte_ptr[1];
     to_return <<= 8;

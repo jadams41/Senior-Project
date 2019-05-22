@@ -14,6 +14,10 @@
 #define TX_BUF_SIZE MAX_ETH_FRAME_SIZE
 #define TX_BUF_TOT_LEN (TX_BUF_SIZE * NUM_TX_DESC)
 
+/* PCI Tuning Parameters
+   Threshold is bytes transferred to chip before transmission starts. */
+#define TX_FIFO_THRESH 256	/* In bytes, rounded down to 32 byte units. */
+
 #define RX_FIFO_THRESH	7	/* Rx buffer level before first PCI xfer.  */
 #define RX_DMA_BURST	7	/* Maximum PCI burst, '6' is 1024 */
 #define TX_DMA_BURST	6	/* Maximum PCI burst, '6' is 1024 */
@@ -34,14 +38,15 @@ typedef struct rt8139_private {
 	uint64_t cur_rx;            // keeps track of current position inside rx ring buffer
 
 	/* tx buffer(s) information */
-	unsigned char *tx_buf[NUM_TX_DESC];
-	unsigned char *tx_bufs;             //beginning virtual address of the tx buffers
-	uint32_t tx_buf_phys;               //physical address for the beginning of the tx buffer
+	uint64_t tx_bufs_virt;         // beginning virtual address of the tx buffers
+	uint64_t tx_bufs[NUM_TX_DESC]; // virtual addresses for beginning of each individual tx buffer
+	uint32_t tx_buf_phys;          // physical address for the beginning of the tx buffer
+	uint64_t cur_tx;               // keeps track of the current tx buffer to use for transmit
 } rt8139_private;
 
 /* externally accessible functions */
 int init_rt8139(PCIDevice *dev);
-
+int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size);
 
 /* rtl8139 register offsets */
 // Symbolic offsets to registers. (taken from linux driver)
@@ -213,12 +218,6 @@ enum Config4Bits {
 enum Cfg9346Bits {
 	Cfg9346_Lock	= 0x00,
 	Cfg9346_Unlock	= 0xC0,
-};
-
-enum Ethertypes {
-	ETHRTYPE_IPV4 = 0x0800,
-	ETHRTYPE_ARP  = 0x0806,
-	ETHRTYPE_IPV6 = 0x86DD,
 };
 
 #endif

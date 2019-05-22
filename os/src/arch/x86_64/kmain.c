@@ -4,6 +4,8 @@
 #include "drivers/fs/vfs.h"
 #include "drivers/interrupts/idt.h"
 #include "drivers/net/8139too.h"
+#include "drivers/net/arp/arp.h"
+#include "drivers/net/ethernet/ethernet.h"
 #include "drivers/memory/memoryManager.h"
 #include "drivers/pci/pci.h"
 #include "drivers/ps2/ps2Driver.h"
@@ -255,6 +257,124 @@ void readBlock32()
 /*     } */
 /* } */
 
+void send_test_ethernet_frame(){
+	uint8_t dest_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	uint8_t src_mac[6]  = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+	uint16_t ethertype = ETHRTYPE_ARP;
+
+	uint8_t data[28] = {
+		0x00,
+		0x01,
+		0x08,
+		0x00,
+		0x06,
+		0x04,
+		0x00,
+		0x01,
+		0x52,
+		0x54,
+		0x00,
+		0x60,
+		0x7c,
+		0x73,
+		0xc0,
+		0xa8,
+		0x7a,
+		0x01,
+		0xff,
+		0xff,
+		0xff,
+		0xff,
+		0xff,
+		0xff,
+		0xc0,
+		0xa8,
+		0x7a,
+		0x12
+	};
+
+	uint8_t *new_frame;
+	int frame_len = create_ethernet_frame(dest_mac, src_mac, ethertype, data, 28, &new_frame);
+
+	rtl8139_transmit_packet(new_frame, frame_len);
+	kfree(new_frame);
+}
+
+void send_test_arp_request(){
+	uint8_t *arp_request_frame;
+	int arp_request_frame_length;
+	
+	/* uint32_t my_ipv4 = 172; */
+	/* my_ipv4 <<= 8; */
+	/* my_ipv4 += 16; */
+	/* my_ipv4 <<= 8; */
+	/* my_ipv4 += 210; */
+	/* my_ipv4 <<= 8; */
+	/* my_ipv4 += 203; */
+
+	/* uint8_t my_mac[6] = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA}; */
+
+	/* uint32_t target_ipv4 = 172; */
+	/* target_ipv4 <<= 8; */
+	/* target_ipv4 += 16; */
+	/* target_ipv4 <<= 8; */
+	/* target_ipv4 += 210; */
+	/* target_ipv4 <<= 8; */
+	/* target_ipv4 += 175; */
+
+	uint32_t my_ipv4 = 192;
+	my_ipv4 <<= 8;
+	my_ipv4 += 168;
+	my_ipv4 <<= 8;
+	my_ipv4 += 122;
+	my_ipv4 <<= 8;
+	my_ipv4 += 16;
+
+	uint8_t my_mac[6] = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+
+	uint32_t target_ipv4 = 192;
+	target_ipv4 <<= 8;
+	target_ipv4 += 168;
+	target_ipv4 <<= 8;
+	target_ipv4 += 122;
+	target_ipv4 <<= 8;
+	target_ipv4 += 1;
+	
+        arp_request_frame_length = create_ipv4_arp_request(my_ipv4, my_mac, target_ipv4, &arp_request_frame);
+
+	rtl8139_transmit_packet(arp_request_frame, arp_request_frame_length);
+}
+
+void send_test_arp_reply(){
+	uint8_t *arp_reply_frame;
+	int arp_reply_frame_length;
+	
+	uint32_t my_ipv4 = 192;
+	my_ipv4 <<= 8;
+	my_ipv4 += 168;
+	my_ipv4 <<= 8;
+	my_ipv4 += 122;
+	my_ipv4 <<= 8;
+	my_ipv4 += 16;
+
+	uint8_t my_mac[6] = {0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA};
+	
+	uint32_t target_ipv4 = 192;
+	target_ipv4 <<= 8;
+	target_ipv4 += 168;
+	target_ipv4 <<= 8;
+	target_ipv4 += 122;
+	target_ipv4 <<= 8;
+	target_ipv4 += 1;
+
+	uint8_t target_mac[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73};
+	
+        arp_reply_frame_length = create_ipv4_arp_reply(my_ipv4, my_mac, target_ipv4, target_mac, &arp_reply_frame);
+
+	rtl8139_transmit_packet(arp_reply_frame, arp_reply_frame_length);
+}
+
+
 int kmain(void *multiboot_point, unsigned int multitest)
 {
 	TagStructureInfo *tagStructureInfo;
@@ -331,8 +451,16 @@ int kmain(void *multiboot_point, unsigned int multitest)
 		init_pci_devices();
 	}
 
-	while (!enabled) ;
+	while(1){
+		while (!enabled) ;
+		send_test_arp_request();
+		send_test_arp_reply();
+		enabled = 0;
 
+		/* while (!enabled) ; */
+		/* send_test_arp_reply(); */
+		/* enabled = 0; */
+	}
 	/* uint64_t initFAT32Params[2] = {2, (uint64_t)ata}; */
 	/* PROC_create_kthread(initFAT32, initFAT32Params); */
 

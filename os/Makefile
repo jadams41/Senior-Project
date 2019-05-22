@@ -136,7 +136,7 @@ $(fat): $(build_dir) $(build_debug_dir) $(kernel) $(grub_cfg) $(fat_blank_img) $
 
 $(kernel): $(assembly_object_files) $(c_object_files) $(linker_script)
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(c_object_files)
-	ln -s ../$(kernel) $(symbol_link_file)
+	ln -s --force ../$(kernel) $(symbol_link_file)
 
 # compile assembly files
 $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.asm

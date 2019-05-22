@@ -6,6 +6,7 @@
 #include "utils/printk.h"
 #include "utils/utils.h"
 #include "utils/byte_order.h"
+#include "ethernet/ethernet.h"
 
 /* RealTek RTL-8139 Fast Ethernet driver */
 static const unsigned int rtl8139_tx_config =
@@ -51,31 +52,31 @@ void print_ethertype(uint32_t ethertype){
 }
 
 void parse_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
-	/* uint8_t *dest_mac = eth_frame; */
-	/* uint8_t *source_mac = eth_frame + 6; */
-	/* uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12))); */
+	uint8_t *dest_mac = eth_frame;
+	uint8_t *source_mac = eth_frame + 6;
+	uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12)));
     
-	/* printk("****** Received Ethernet Frame ******\n"); */
-	/* printk("Total Length: %u\n", frame_size); */
+	printk("****** Received Ethernet Frame ******\n");
+	printk("Total Length: %u\n", frame_size);
     
-	/* printk("Dest   MAC: "); */
-	/* print_mac_addr(dest_mac); */
-	/* printk("\n"); */
+	printk("Dest   MAC: ");
+	print_mac_addr(dest_mac);
+	printk("\n");
 
-	/* printk("Source MAC: "); */
-	/* print_mac_addr(source_mac); */
-	/* printk("\n"); */
+	printk("Source MAC: ");
+	print_mac_addr(source_mac);
+	printk("\n");
 
-	/* if(ethertype_or_len < 1501){ */
-	/* 	printk("Data Length: %hu\n", ethertype_or_len); */
-	/* } */
-	/* else { */
-	/* 	printk("Ethertype: "); */
-	/* 	print_ethertype(ethertype_or_len); */
-	/* 	printk(" (0x%04x)\n", ethertype_or_len); */
-	/* } */
+	if(ethertype_or_len < 1501){
+		printk("Data Length: %hu\n", ethertype_or_len);
+	}
+	else {
+		printk("Ethertype: ");
+		print_ethertype(ethertype_or_len);
+		printk(" (0x%04x)\n", ethertype_or_len);
+	}
     
-	/* printk("*************************************\n\n"); */
+	printk("*************************************\n\n");
 }
 
 /* Inform rtl8139 that packet was successfully received 
@@ -103,7 +104,7 @@ static void rtl8139_rx_isr_ack(uint32_t rt_ioaddr){
 	}
 }
 
-int rtl_rx(){
+int rtl_rx_interrupt(){
 	int received = 0;
 	uint32_t rt_ioaddr = global_rt_ioaddr;
 	rt8139_private *priv = global_rtl_priv;
@@ -114,7 +115,7 @@ int rtl_rx(){
 	unsigned int rx_size = 0;
 	uint32_t ring_offset;
 	uint32_t rx_status;
-	uint8_t *eth_frame_beginning;
+	//uint8_t *eth_frame_beginning;
 	
 	if(global_rtl_priv == NULL){
 		printk_err("rtl not initialized, can't receive packet\n");
@@ -178,8 +179,8 @@ int rtl_rx(){
 
 		//handle received ethernet frame
 		//todo: currently only printing information about packet, implement logic to store received transmission in the kernel
-		eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
-		parse_eth_frame(eth_frame_beginning, rx_size);
+		//eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
+		//parse_eth_frame(eth_frame_beginning, rx_size);
 	
 		//acknowledge packet
 		rtl8139_rx_isr_ack(rt_ioaddr);
@@ -192,15 +193,76 @@ out:
 	return received;
 }
 
-/* interrupt service routine for rx interrupt 
- * NOTE: heavy lifting occurs in `rtl_rx` function 
+static void rtl8139_tx_interrupt(){
+	uint32_t rt_ioaddr = global_rt_ioaddr;
+	rt8139_private *priv = global_rtl_priv;
+
+	//todo change this (will only clear the most recent transmission)
+	unsigned long tx_left = 1;
+
+	while(tx_left > 0){
+		int entry = (priv->cur_tx - 1) % NUM_TX_DESC;
+		int txstatus;
+
+		txstatus = inl(rt_ioaddr + (TxStatus0 + (entry * sizeof(uint32_t))));
+
+		if (!(txstatus & (TxStatOK | TxUnderrun | TxAborted))){
+			break; /* It sill hasn't been txed */
+		}
+
+		if (txstatus & (TxOutOfWindow | TxAborted)) {
+			/* There was a major error, log it. */
+			printk_warn("major tx eroror\n");
+
+			if(txstatus & TxAborted){
+				printk_err("Tx aborted error\n");
+				outl(rt_ioaddr + TxConfig, TxClearAbt);
+				outw(rt_ioaddr + IntrStatus, TxErr);
+			}
+			asm("hlt");
+		}
+		else {
+			if (txstatus & TxUnderrun){
+				printk_err("TxUnderrun, don't know how to handle, halting\n");
+				asm("hlt");
+			}
+			
+		}
+		
+		tx_left -= 1;
+	}
+}
+
+/* interrupt service routine for rx/tx interrupt 
+ * NOTE: heavy lifting occurs in `rtl_rx_interrupt` function 
  * TODO: figure out how to make this work without the use of global variables */
 void rtl_isr(int irq, int err){
-	//printk("received rtl interrupt\n", irq);
-
-	int received = rtl_rx();
+	uint16_t status, ackstat;
+	uint32_t rt_ioaddr = global_rt_ioaddr;
+	//rt8139_private *priv = global_rtl_priv;
 	
-	printk_info("received %d packets\n", received);
+	//printk("received rtl interrupt\n", irq);
+	
+	status = inw(rt_ioaddr + IntrStatus);
+	ackstat = status & ~(RxAckBits | TxErr);
+
+	//todo not really sure what this does....
+	if(ackstat){
+		outw(rt_ioaddr + IntrStatus, ackstat);
+	}
+
+	if(status & RxAckBits){
+		int received = rtl_rx_interrupt();
+		printk_info("received %d packets\n", received);		
+	}
+	
+	if (status & (TxOK | TxErr)) {
+		rtl8139_tx_interrupt();
+
+		if (status & TxErr)
+			outw(rt_ioaddr + IntrStatus, TxErr);
+	}
+
 }
 
 void rtl8139_wake_up(uint32_t rt_ioaddr){
@@ -291,7 +353,6 @@ int init_rt8139(PCIDevice *dev) {
 	uint32_t rt_ioaddr;
 	uint64_t rx_buffer_virt;
 	uint32_t rx_buffer_phys;
-	uint32_t tx_buf_phys;
 	uint8_t tmp;
 	uint16_t intr_mask; 
 	int i;
@@ -382,11 +443,12 @@ int init_rt8139(PCIDevice *dev) {
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Lock);
 
 	/* init Tx buffer DMA addresses */
-	priv->tx_bufs = (unsigned char*)alloc_dma_coherent(TX_BUF_TOT_LEN, &tx_buf_phys);
+	priv->tx_bufs_virt = (uint64_t)alloc_dma_coherent(TX_BUF_TOT_LEN, &priv->tx_buf_phys);
 	for(i = 0; i < NUM_TX_DESC; i++){
-		priv->tx_buf[i] = &(priv->tx_bufs[i * TX_BUF_SIZE]); 
-		outl(rt_ioaddr + TxAddr0 + (i * 4), tx_buf_phys + (priv->tx_buf[i] - priv->tx_bufs));
+		priv->tx_bufs[i] = priv->tx_bufs_virt + i * TX_BUF_SIZE; 
+		outl(rt_ioaddr + TxAddr0 + (i * 4), priv->tx_buf_phys + i * TX_BUF_SIZE);
 	}
+	priv->cur_tx = 0;
 
 	global_rtl_priv = priv;
 
@@ -427,6 +489,135 @@ int init_rt8139(PCIDevice *dev) {
 	return 0;
 }
 
-int rtl8139_transmit_packet(){
+// NOTE: CRC code taken from https://barrgroup.com/Embedded-Systems/How-To/CRC-Calculation-C-Code
+typedef uint8_t crc;
+
+#define POLYNOMIAL 0xD8
+#define WIDTH (8 * sizeof(crc))
+#define TOPBIT (1 << (WIDTH - 1))
+
+//static crc crcTable[256];
+//static int crc_initialized = 0;
+
+/* static void crcInit(){ */
+/* 	crc remainder; */
+/* 	int dividend; */
+/* 	uint8_t bit; */
+	
+/* 	/\* Compute the remainder of each possible dividend *\/ */
+/* 	for(dividend = 0; dividend < 256; ++dividend){ */
+/* 		/\* Start with the dividend followed by zeros. *\/ */
+/* 		remainder = dividend << (WIDTH - 8); */
+
+/* 		/\* Perform Modulo-2 division, a bit at a time. *\/ */
+/* 		for(bit = 8; bit > 0; --bit){ */
+/* 			if(remainder & TOPBIT){ */
+/* 				remainder = (remainder << 1) ^ POLYNOMIAL; */
+/* 			} */
+/* 			else { */
+/* 				remainder = (remainder << 1); */
+/* 			} */
+/* 		} */
+
+/* 		/\* store the result in the crc table *\/ */
+/* 		crcTable[dividend] = remainder; */
+/* 	} */
+
+/* 	crc_initialized = 1; */
+/* } */
+
+//todo: this should probably be moved somewhere else once I get transmit working
+static int copy_data_with_checksum(uint8_t *data, uint64_t data_size, uint64_t tx_buf_beginning){
+	uint8_t *tx_buf_cur = (uint8_t*)tx_buf_beginning;
+	uint8_t cur_byte;
+	//uint8_t modified_cur_byte;
+	//crc remainder = 0;
+	int i;
+	
+	if(data_size >= TX_BUF_SIZE){
+		printk_err("attempted copy too large of an ethernet frame into transmit buffer, halting\n");
+		asm("hlt");
+		return -1;
+	}
+
+	/* if(!crc_initialized){ */
+	/* 	crcInit(); */
+	/* } */
+	printk("***** SENDING ETH FRAME *****\n");
+	/* Copy data byte by byte while generating crc */
+	for(i = 0; i < data_size;){
+		cur_byte = data[i++];
+		/* modified_cur_byte = cur_byte ^ (remainder >> (WIDTH - 8)); */
+		/* remainder = crcTable[modified_cur_byte] ^ (remainder << 8); */
+		printk("%02hx ", cur_byte);
+	        if(i % 16 == 0){
+			printk("\n");
+		}
+		else if(i % 8 == 0){
+			printk(" ");
+		}
+		*tx_buf_cur = cur_byte;
+		tx_buf_cur += 1;
+	}
+	printk("\n****************************\n");
+
+	return 0;
+}
+
+//https://www.cs.usfca.edu/~cruse/cs326f04/RTL8139_ProgrammersGuide.pdf
+//The process of transmitting a packet:
+int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
+	rt8139_private *priv = global_rtl_priv; //todo stop using globals
+	uint8_t tx_buf_to_use;
+
+	//disable interrupts
+	asm("CLI");
+
+	parse_eth_frame(data, data_size);
+	
+	if(priv == NULL){
+		printk_err("rtl8139 seemingly not initialized, cannot transmit\n");
+		return -1;
+	}
+	
+        /* 1: copy the packet to a physically continuous buffer in memory */
+	// calculate the next Tx descriptor entry
+	tx_buf_to_use = priv->cur_tx % NUM_TX_DESC;
+
+	// make sure the data is of correct length
+	if(data_size < TX_BUF_SIZE) {
+		//check if packet size is smaller than minimum # of frame octets
+		if(data_size < ETH_ZLEN) {
+			int i;
+			uint8_t *payload = (uint8_t*)priv->tx_bufs[tx_buf_to_use];
+			for(i = 0; i < ETH_ZLEN; i++){
+				payload[i] = 0;
+			}
+		}
+
+		//copy data while calculating checksum and append checksum to end
+		copy_data_with_checksum(data, data_size, priv->tx_bufs[tx_buf_to_use]);
+	}
+	else {
+		printk_err("attempted to transmit too large of an ethernet frame\n");
+		asm("hlt");
+	}
+	
+	/* 2: Write the descriptor which is functioning */
+	//2.1: Fill in the Start Address (physical address) of this buffer.
+	//this seems to only be done during initialization
+
+	//2.2: Fill in Transmit Status: the size of this packet, the early transmit threshold, Clear OWN bit in TSD (this starts the PCI operation)
+	outl(global_rt_ioaddr + TxStatus0 + (tx_buf_to_use * sizeof(uint32_t)),
+	     ((TX_FIFO_THRESH << 11) & 0x003f0000) | (data_size > ETH_ZLEN ? data_size : ETH_ZLEN));
+
+	priv->cur_tx += 1;
+
+	printk_info("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
+	
+	//enable interrupts
+	asm("STI");
+	
+
 	return 0;
 }
