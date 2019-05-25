@@ -5,6 +5,7 @@
 #include "net/arp/arp.h"
 #include "net/ethernet/ethernet.h"
 #include "net/ethernet/realtek/8139too.h"
+#include "net/ip/ipv4.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
 #include "utils/utils.h"
@@ -63,14 +64,17 @@ void parse_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
 	/* printk("Source MAC: %s\n", source_addr_str); */
 
 	if(ethertype_or_len < 1501){
-		/* printk("Data Length: %hu\n", ethertype_or_len); */
+		//printk("Data Length: %hu\n", ethertype_or_len);
 	}
 	else {
-		/* printk("Ethertype: "); */
-		/* print_ethertype(ethertype_or_len); */
-		/* printk(" (0x%04x)\n", ethertype_or_len); */
+		//printk("Ethertype: ");
+		//print_ethertype(ethertype_or_len);
+		//printk(" (0x%04x)\n", ethertype_or_len);
 		if(ethertype_or_len == ETHRTYPE_ARP){
 			handle_received_arp_packet(eth_frame, frame_size);
+		}
+		else if(ethertype_or_len == ETHRTYPE_IPV4){
+			handle_received_ip_packet(eth_frame, frame_size);
 		}
 	}
     
