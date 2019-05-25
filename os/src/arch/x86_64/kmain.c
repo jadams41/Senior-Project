@@ -11,6 +11,7 @@
 #include "net/arp/arp.h"
 #include "net/ethernet/realtek/8139too.h"
 #include "net/ethernet/ethernet.h"
+#include "net/ip/ipv4.h"
 #include "test/test.h"
 #include "test/snakes/snakes.h"
 #include "types/process.h"
@@ -374,6 +375,30 @@ void send_test_arp_reply(){
 	rtl8139_transmit_packet(arp_reply_frame, arp_reply_frame_length);
 }
 
+void send_test_ipv4(){
+	uint8_t *ipv4_frame;
+	int ipv4_frame_length;
+
+	uint32_t my_ipv4 = 192;
+	my_ipv4 <<= 8;
+	my_ipv4 += 168;
+	my_ipv4 <<= 8;
+	my_ipv4 += 122;
+	my_ipv4 <<= 8;
+	my_ipv4 += 16;
+	
+	uint32_t target_ipv4 = 192;
+	target_ipv4 <<= 8;
+	target_ipv4 += 192;
+	target_ipv4 <<= 8;
+	target_ipv4 += 192;
+	target_ipv4 <<= 8;
+	target_ipv4 += 192;
+
+	ipv4_frame_length = create_ipv4_packet(IPV4_PROTO_UDP, my_ipv4, target_ipv4, NULL, 0, &ipv4_frame);
+	rtl8139_transmit_packet(ipv4_frame, ipv4_frame_length);
+}
+
 
 int kmain(void *multiboot_point, unsigned int multitest)
 {
@@ -453,8 +478,7 @@ int kmain(void *multiboot_point, unsigned int multitest)
 
 	while(1){
 		while (!enabled) ;
-		send_test_arp_request();
-		send_test_arp_reply();
+		send_test_ipv4();
 		enabled = 0;
 
 		/* while (!enabled) ; */

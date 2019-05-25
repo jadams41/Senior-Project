@@ -27,7 +27,8 @@ static int set_version(ipv4_header *header, uint8_t version){
 	}
 
 	uint8_t packed = header->version__ihl;
-	packed &= (~IPV4_PACKET_VER_MASK & ((version & 0x0F) << 4));
+	packed &= ~IPV4_PACKET_VER_MASK; //clear version bits
+	packed |= (IPV4_PACKET_VER_MASK & (version << 4)); //set version value
 	header->version__ihl = packed;
 
 	return 0;
@@ -46,7 +47,8 @@ static int set_ihl(ipv4_header *header, uint8_t ihl){
 	}
 	
 	uint8_t packed = header->version__ihl;
-	packed &= (~IPV4_PACKET_IHL_MASK & (ihl & 0x0F));
+	packed &= ~IPV4_PACKET_IHL_MASK; //clear ihl bits
+	packed |= (IPV4_PACKET_IHL_MASK & ihl); //set ihl value
 	header->version__ihl = packed;
 	return 0;
 }
@@ -64,7 +66,8 @@ static int set_dscp(ipv4_header *header, uint8_t dscp){
 	}
 	
 	uint8_t packed = header->dscp__ecn;
-	packed &= (~IPV4_PACKET_DSCP_MASK & (dscp << 2));
+	packed &= ~IPV4_PACKET_DSCP_MASK; //clear dscp bits
+	packed |= (IPV4_PACKET_DSCP_MASK & (dscp << 2)); //set supplied dscp value
 	header->dscp__ecn = packed;
 	return 0;
 }
@@ -82,7 +85,8 @@ static int set_ecn(ipv4_header *header, uint8_t ecn){
 	}
 	
 	uint8_t packed = header->dscp__ecn;
-	packed &= (~IPV4_PACKET_ECN_MASK & ecn);
+	packed &= ~IPV4_PACKET_ECN_MASK; //clear ecn bits
+	packed |= (IPV4_PACKET_ECN_MASK & ecn); //set supplied ecn value
 	header->dscp__ecn = packed;
 	return 0;
 }
@@ -110,8 +114,8 @@ static int set_flags(ipv4_header *header, uint8_t dont_frag, uint8_t more_frag){
 	
 	uint8_t packed = header->flags__frag_off;
 	packed &= ~IPV4_FLAGS_RESERVED_MASK; //set reserved flag = 0
-	packed &= (~IPV4_FLAGS_DONTFRAG_MASK & (dont_frag << 14));
-	packed &= (~IPV4_FLAGS_MOREFRAG_MASK & (more_frag << 13));
+	packed &= (~IPV4_FLAGS_DONTFRAG_MASK | (dont_frag << 14));
+	packed &= (~IPV4_FLAGS_MOREFRAG_MASK | (more_frag << 13));
 
 	header->flags__frag_off = packed;
 	return 0;
@@ -135,7 +139,7 @@ static int set_frag_off(ipv4_header *header, uint16_t frag_off){
 	
 	
 	uint16_t packed = header->flags__frag_off;
-	packed &= (~IPV4_FRAGMENTOFFSET_MASK & frag_off);
+	packed &= (~IPV4_FRAGMENTOFFSET_MASK | frag_off);
 
 	header->flags__frag_off = packed;
 	return 0;
