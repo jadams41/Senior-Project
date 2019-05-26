@@ -2,6 +2,7 @@
 #include "net/ethernet/ethernet.h"
 #include "net/ethernet/realtek/8139too.h"
 #include "net/ip/ipv4.h"
+#include "net/ip/icmp.h"
 #include "net/ip/checksum.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
@@ -18,7 +19,6 @@ static void ipv4_to_str(uint32_t ipv4, char *out){
 	sprintk(out, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4);
 
 }
-
 
 static int set_version(ipv4_header *header, uint8_t version){
 	if((version & 0xF) != version){
@@ -180,6 +180,7 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 		switch(ip_head->protocol){
 		case IPV4_PROTO_ICMP:
 			printk("\tProtocol: ICMP\n");
+			handle_received_icmp_packet(ip_head);
 			break;
 		case IPV4_PROTO_TCP:
 			printk("\tProtocol: TCP\n");
@@ -213,7 +214,7 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
    @data_len length of data to include in packet
    @packet_return upon successful packet creation, will contain pointer to created packet
 */
-int create_ipv4_packet(uint8_t protocol, uint32_t source, uint32_t dest, uint8_t *data, uint64_t data_len, uint8_t **packet_return){
+int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, uint8_t *data, uint64_t data_len, uint8_t **packet_return){
 	uint8_t packet[ETH_DATA_LEN];
 	ipv4_header *head = (ipv4_header*)packet;
 	
@@ -234,6 +235,7 @@ int create_ipv4_packet(uint8_t protocol, uint32_t source, uint32_t dest, uint8_t
 	   set_ecn(head, IPV4_ECN_NONECT) ||
 	   set_flags(head, 0, 0) ||
 	   set_frag_off(head, htonl(IPV4_FRAGOFF_FIRST))){
+		*packet_return = (void *)0;
 		return 0;
 	}
 	head->total_len = htons((ihl * 4) + data_len);
@@ -259,7 +261,8 @@ int create_ipv4_packet(uint8_t protocol, uint32_t source, uint32_t dest, uint8_t
 	        packet_data[i] = data[i];
 	}
 
-	hw_addr hw_dest = broadcast_mac_addr(); //todo replace this with router's mac when I figure out how to get that information
+	uint8_t hw_dest_arr[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73};
+	hw_addr hw_dest = create_hw_addr(hw_dest_arr); //todo replace this with router's mac when I figure out how to get that information
 	hw_addr hw_src = global_rtl_priv->mac_addr;
 	
 	/* finally, create an ethernet frame with the new ipv4 packet as data */

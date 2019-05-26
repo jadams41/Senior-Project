@@ -2,6 +2,7 @@
 #define IPV4
 
 #include <stdint-gcc.h>
+#include "net/ethernet/ethernet.h"
 
 /* typedef struct { */
 /* 	uint8_t reserved:1; //must be 0 */
@@ -53,18 +54,24 @@
 /* 				      Network Address Translation Device *\/ */
 /* } __attribute__((packed)) ipv4_header; */
 
+typedef uint32_t ipv4_addr;
+typedef uint8_t ipv4_proto;
+
 typedef struct {
-	uint8_t   version__ihl:8;      /* Version (4-bits) & Internet Header Length (4-bits) */
-	uint8_t   dscp__ecn:8;         /* Differentiated Services Code Point (6-bits) & Explicit Congestion Notification (2-bits) */
-	uint16_t  total_len:16;        /* Total Length */
-	uint16_t  id:16;               /* Identification */
-	uint16_t  flags__frag_off:16;  /* Flags (3-bits) & Fragmentation Offset (13-bits) */
-	uint8_t   ttl:8;               /* Time To Live */
-	uint8_t   protocol:8;          /* Protocol */
-	uint16_t  header_check:16;     /* Header Checksum */
-	uint32_t  source:32;           /* Source IPv4 Address */
-	uint32_t  dest:32;             /* Destination Ipv4 Address */
+	uint8_t    version__ihl:8;      /* Version (4-bits) & Internet Header Length (4-bits) */
+	uint8_t    dscp__ecn:8;         /* Differentiated Services Code Point (6-bits) & Explicit Congestion Notification (2-bits) */
+	uint16_t   total_len:16;        /* Total Length */
+	uint16_t   id:16;               /* Identification */
+	uint16_t   flags__frag_off:16;  /* Flags (3-bits) & Fragmentation Offset (13-bits) */
+	uint8_t    ttl:8;               /* Time To Live */
+	uint8_t    protocol:8;          /* Protocol */
+	uint16_t   header_check:16;     /* Header Checksum */
+        ipv4_addr  source:32;           /* Source IPv4 Address */
+	ipv4_addr  dest:32;             /* Destination Ipv4 Address */
 } __attribute__((packed)) ipv4_header;
+
+void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len);
+int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, uint8_t *data, uint64_t data_len, uint8_t **packet_return);
 
 /* Masks to extract all ipv4_header combined fields */
 // VERSION__IHL
@@ -79,13 +86,12 @@ typedef struct {
 #define IPV4_FLAGS_MOREFRAG_MASK   0b0010000000000000
 #define IPV4_FRAGMENTOFFSET_MASK   0b0001111111111111
 
-void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len);
-int create_ipv4_packet(uint8_t protocol, uint32_t source, uint32_t dest, uint8_t *data, uint64_t data_len, uint8_t **packet_return);
-
 #define IPV4_VERSION 4 //version is always 4 for ipv4
 
 #define IPV4_MIN_IHL 5  //just the required fields (no options) => packet length = 20 bytes
 #define MAX_IHL 15 //max options => packet length = 60 bytes
+
+#define IPV4_DATA_LEN (ETH_DATA_LEN - (IPV4_MIN_IHL * 4))
 
 /* DSCP values (common) 
  * not standardized, but according to wikipedia, most networks use:

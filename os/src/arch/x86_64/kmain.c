@@ -11,7 +11,9 @@
 #include "net/arp/arp.h"
 #include "net/ethernet/realtek/8139too.h"
 #include "net/ethernet/ethernet.h"
+#include "net/ip/icmp.h"
 #include "net/ip/ipv4.h"
+#include "net/ip/udp.h"
 #include "test/test.h"
 #include "test/snakes/snakes.h"
 #include "types/process.h"
@@ -399,6 +401,57 @@ void send_test_ipv4(){
 	rtl8139_transmit_packet(ipv4_frame, ipv4_frame_length);
 }
 
+void send_test_udp(){
+	uint8_t *udp_frame;
+	int udp_frame_len;
+
+	uint8_t data[10] = {0xAB, 0xBC, 0xCD, 0xDE, 0xEF, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
+
+	ipv4_addr source = 99;
+	source <<= 8;
+	source += 100;
+	source <<= 8;
+	source += 101;
+	source <<= 8;
+	source += 102;
+
+	ipv4_addr dest = 33;
+        dest <<= 8;
+        dest += 34;
+	dest <<= 8;
+	dest += 35;
+	dest <<= 8;
+	dest += 36;
+	
+	udp_frame_len = create_udp_packet(source, 55, dest, 106, data, 10, &udp_frame);
+	rtl8139_transmit_packet(udp_frame, udp_frame_len);
+}
+
+void send_ping(){
+	uint8_t *icmp_frame;
+	int icmp_frame_len;
+
+	//bridge's ip address: 169.254.6.164
+	ipv4_addr source = 169;
+	source <<= 8;
+	source += 254;
+	source <<= 8;
+	source += 6;
+	source <<= 8;
+	source += 168;
+
+	ipv4_addr dest = 169;
+        dest <<= 8;
+        dest += 254;
+	dest <<= 8;
+	dest += 6;
+	dest <<= 8;
+	dest += 164;
+	
+	icmp_frame_len = create_icmp_echo_packet(source, dest, ICMP_TYPE_ECHO_REQUEST, 0xBEEF, 1, NULL, 0, &icmp_frame);
+	rtl8139_transmit_packet(icmp_frame, icmp_frame_len);
+}
+
 
 int kmain(void *multiboot_point, unsigned int multitest)
 {
@@ -478,7 +531,7 @@ int kmain(void *multiboot_point, unsigned int multitest)
 
 	while(1){
 		while (!enabled) ;
-		send_test_ipv4();
+		send_ping();
 		enabled = 0;
 
 		/* while (!enabled) ; */
