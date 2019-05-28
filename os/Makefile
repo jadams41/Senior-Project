@@ -1,3 +1,5 @@
+#!/usr/bin/colormake
+
 # ===== BUILD CONFIGURATION VARIABLES =====
 # default target architecture
 arch ?= x86_64
@@ -11,6 +13,7 @@ fat_blank_img ?= .cache/fat_templates/blank_fat_$(fat_bs)_$(fat_num_blocks).img
 incl_path := $(shell pwd)/src/arch/x86_64/
 
 # cross-compiler
+CC_OPT="-fdiagnostics-color=always"
 CC=~/opt/cross64/x86_64-elf-4.9.1-Linux-x86_64/bin/x86_64-elf-gcc
 
 # ===== PROJECT STRUCTURE =====
@@ -146,4 +149,4 @@ $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 #compile c files
 $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.c
 	@mkdir -p $(shell dirname $@)
-	@$(CC) -c -g -I$(incl_path) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone
+	@$(CC) $(CC_OPT) -c -g -I$(incl_path) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone

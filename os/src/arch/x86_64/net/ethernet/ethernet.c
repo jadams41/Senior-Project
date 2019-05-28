@@ -75,7 +75,7 @@ int create_ethernet_frame(hw_addr dest, hw_addr src, uint16_t ethertype, uint8_t
 	int i;
 	for(i = 0; i < 6; i++){
                 //todo replace w/ memcpy
-		new_frame_header->dest_mac[i] = dest.bytes[i];
+		new_frame_header->dest_mac[i] = broadcast_mac.bytes[i]; //= dest.bytes[i]; todo: CHANGE THIS BACK
 		new_frame_header->src_mac[i] = src.bytes[i];
 	}
 

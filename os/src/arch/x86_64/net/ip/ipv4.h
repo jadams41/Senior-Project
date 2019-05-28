@@ -72,6 +72,7 @@ typedef struct {
 
 void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len);
 int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, uint8_t *data, uint64_t data_len, uint8_t **packet_return);
+void ipv4_to_str(ipv4_addr ipv4, char *out);
 
 /* Masks to extract all ipv4_header combined fields */
 // VERSION__IHL

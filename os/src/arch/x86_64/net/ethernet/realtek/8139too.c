@@ -418,13 +418,15 @@ int init_rt8139(PCIDevice *dev) {
 	priv->mac_addr = create_hw_addr((uint8_t*)&mac_addr_int);
 
 	//todo figure out how to actually set this up
-        priv->ipv4_addr = 169;
+	//ens33 ip : 172.16.210.176
+	//virbr0 ip: 192.168.122.1
+	priv->ipv4_addr = 172;
 	priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 254;
+        priv->ipv4_addr += 16;
         priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 6;
+        priv->ipv4_addr += 210;
         priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 168;
+        priv->ipv4_addr += 185;
 	
 	/* unlock Config[01234] and BMCR register writes */
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Unlock);

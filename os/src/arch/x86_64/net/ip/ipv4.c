@@ -10,7 +10,7 @@
 
 extern rt8139_private *global_rtl_priv;
 
-static void ipv4_to_str(uint32_t ipv4, char *out){
+void ipv4_to_str(ipv4_addr ipv4, char *out){
 	uint8_t ipv4_addr1 = ((uint8_t*)&ipv4)[3];
 	uint8_t ipv4_addr2 = ((uint8_t*)&ipv4)[2];
 	uint8_t ipv4_addr3 = ((uint8_t*)&ipv4)[1];
@@ -53,7 +53,7 @@ static int set_ihl(ipv4_header *header, uint8_t ihl){
 	return 0;
 }
 
-static uint8_t get_ihl(ipv4_header *header){
+static uint8_t __attribute__((__unused__)) get_ihl(ipv4_header *header){
 	uint8_t version_and_ihl = header->version__ihl;
 	uint8_t ihl = (version_and_ihl & IPV4_PACKET_IHL_MASK);
 	return ihl;
@@ -72,7 +72,7 @@ static int set_dscp(ipv4_header *header, uint8_t dscp){
 	return 0;
 }
 
-static uint8_t get_dscp(ipv4_header *header){
+static uint8_t __attribute__((__unused__)) get_dscp(ipv4_header *header){
 	uint8_t dscp_and_ecn = header->dscp__ecn;
 	uint8_t dscp = (dscp_and_ecn & IPV4_PACKET_DSCP_MASK) >> 2;
 	return dscp;
@@ -91,7 +91,7 @@ static int set_ecn(ipv4_header *header, uint8_t ecn){
 	return 0;
 }
 
-static uint8_t get_ecn(ipv4_header *header){
+static uint8_t __attribute__((__unused__)) get_ecn(ipv4_header *header){
 	uint8_t dscp_and_ecn = header->dscp__ecn;
 	uint8_t ecn = (dscp_and_ecn & IPV4_PACKET_ECN_MASK);
 	return ecn;
@@ -121,12 +121,12 @@ static int set_flags(ipv4_header *header, uint8_t dont_frag, uint8_t more_frag){
 	return 0;
 }
 
-static uint8_t get_flag_dontfrag(ipv4_header *header){
+static uint8_t __attribute__((__unused__)) get_flag_dontfrag(ipv4_header *header){
 	uint16_t flags_and_fragoff = ntohs(header->flags__frag_off);
 	return (flags_and_fragoff & IPV4_FLAGS_DONTFRAG_MASK) != 0;
 }
 
-static uint8_t get_flag_morefrag(ipv4_header *header){
+static uint8_t __attribute__((__unused__)) get_flag_morefrag(ipv4_header *header){
 	uint16_t flags_and_fragoff = ntohs(header->flags__frag_off);
 	return (flags_and_fragoff & IPV4_FLAGS_MOREFRAG_MASK) != 0;
 }
@@ -145,7 +145,7 @@ static int set_frag_off(ipv4_header *header, uint16_t frag_off){
 	return 0;
 }
 
-static uint16_t get_frag_off(ipv4_header *header){
+static uint16_t __attribute__((__unused__)) get_frag_off(ipv4_header *header){
 	uint16_t flags_and_fragoff = ntohs(header->flags__frag_off);
 	return (flags_and_fragoff & IPV4_FRAGMENTOFFSET_MASK);
 }
@@ -156,40 +156,40 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 	char source_ip_str[16];
 	char dest_ip_str[16];
 
-	uint8_t version, ihl, dscp, ecn;
-	uint16_t fragmentation_offset;
+	uint8_t version; /*, ihl, dscp, ecn; */
+	/* uint16_t fragmentation_offset; */
 	
-	ihl = get_ihl(ip_head);
+	/* ihl = get_ihl(ip_head); */
         version = get_version(ip_head);
-	dscp = get_dscp(ip_head);
-	ecn = get_ecn(ip_head);
-	fragmentation_offset = get_frag_off(ip_head);
+	/* dscp = get_dscp(ip_head); */
+	/* ecn = get_ecn(ip_head); */
+	/* fragmentation_offset = get_frag_off(ip_head); */
 	
 	switch(version){
 	case IPV4_VERSION:
-		printk("--------------- Received IPv4 Packet ---------------\n");
-		printk("\tHeader Length = %u\n", ihl * 4);
-		printk("\tDSCP = 0x%x\n", dscp);
-		printk("\tECN = 0b%d%d\n", (ecn & 0b10) >> 1, ecn & 0b01);
-		printk("\tTotal packet length = %d bytes\n", ntohs(ip_head->total_len));
-		printk("\tId = %u\n", ntohs(ip_head->id));
-		printk("\tFlags: Don't Fragment=%d, More Fragments=%d\n", get_flag_dontfrag(ip_head), get_flag_morefrag(ip_head));
-		printk("\tFragmentation Offset = %u\n", fragmentation_offset);
-		printk("\tTime to Live = %u\n", ip_head->ttl);
+		printk_info("- Received IPv4 Packet\n");
+		/* printk("\tHeader Length = %u\n", ihl * 4); */
+		/* printk("\tDSCP = 0x%x\n", dscp); */
+		/* printk("\tECN = 0b%d%d\n", (ecn & 0b10) >> 1, ecn & 0b01); */
+		/* printk("\tTotal packet length = %d bytes\n", ntohs(ip_head->total_len)); */
+		/* printk("\tId = %u\n", ntohs(ip_head->id)); */
+		/* printk("\tFlags: Don't Fragment=%d, More Fragments=%d\n", get_flag_dontfrag(ip_head), get_flag_morefrag(ip_head)); */
+		/* printk("\tFragmentation Offset = %u\n", fragmentation_offset); */
+		/* printk("\tTime to Live = %u\n", ip_head->ttl); */
 
 		switch(ip_head->protocol){
 		case IPV4_PROTO_ICMP:
-			printk("\tProtocol: ICMP\n");
+			printk_info("\tProtocol: ICMP\n");
 			handle_received_icmp_packet(ip_head);
 			break;
 		case IPV4_PROTO_TCP:
-			printk("\tProtocol: TCP\n");
+			printk_info("\tProtocol: TCP\n");
 			break;
 		case IPV4_PROTO_UDP:
-			printk("\tProtocol: UDP\n");
+			printk_info("\tProtocol: UDP\n");
 			break;
 		default:
-			printk("\tProtocol: Unrecognized (0x%x)\n", ip_head->protocol);
+			printk_info("\tProtocol: Unrecognized (0x%x)\n", ip_head->protocol);
 			break;
 		}
 
@@ -197,13 +197,14 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 
 	        ipv4_to_str(ntohl(ip_head->source), source_ip_str);
 		ipv4_to_str(ntohl(ip_head->dest), dest_ip_str);
-		printk("Source IPv4 address: %s\n", source_ip_str);
-		printk("Destination IPv4 address: %s\n", dest_ip_str);
+		printk("\tSource IPv4 address: %s\n", source_ip_str);
+		printk("\tDestination IPv4 address: %s\n", dest_ip_str);
 		break;
 	default:
-		printk_warn("received ip packet with version=%u don't know how to handle!\n", version);
+		printk_warn("\treceived ip packet with version=%u don't know how to handle!\n", version);
 		break;
 	}
+	printk("\n");
 }
 
 /**
