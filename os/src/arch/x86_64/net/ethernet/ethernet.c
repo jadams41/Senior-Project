@@ -1,5 +1,7 @@
 #include <stdint-gcc.h>
-#include "ethernet.h"
+#include "net/ethernet/ethernet.h"
+#include "net/arp/arp.h"
+#include "net/ip/ipv4.h"
 #include "utils/printk.h"
 #include "drivers/memory/memoryManager.h"
 #include "utils/byte_order.h"
@@ -38,6 +40,19 @@ char *hw_addr_to_str(hw_addr addr){
 		addr.bytes[0], addr.bytes[1], addr.bytes[2], addr.bytes[3], addr.bytes[4], addr.bytes[5]);
 
 	return ret_str;
+}
+
+char *ethertype_to_str(uint32_t ethertype){
+	switch(ethertype){
+	case ETHRTYPE_IPV4:
+		return ETHRTYPE_IPV4_NAME;
+	case ETHRTYPE_ARP:
+		return ETHRTYPE_ARP_NAME;
+	case ETHRTYPE_IPV6:
+		return ETHRTYPE_IPV6_NAME;
+	default:
+	        return ETHRTYPE_UNKNOWN_NAME;
+	}
 }
 
 /**
@@ -92,4 +107,50 @@ int create_ethernet_frame(hw_addr dest, hw_addr src, uint16_t ethertype, uint8_t
 	
 out:
 	return new_frame_len;
+}
+
+void __attribute__((unused)) print_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
+	uint8_t *dest_mac = eth_frame;
+	uint8_t *source_mac = eth_frame + 6;
+	uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12)));
+
+        hw_addr source_hw_addr = create_hw_addr(source_mac);
+        hw_addr dest_hw_addr = create_hw_addr(dest_mac);
+
+	char *source_addr_str = hw_addr_to_str(source_hw_addr);
+	char *dest_addr_str = hw_addr_to_str(dest_hw_addr);
+
+	printk("****** Received Ethernet Frame ******\n");
+	printk("Total Length: %u\n", frame_size);
+	
+	printk("Dest MAC: %s\n", dest_addr_str);
+	printk("Source MAC: %s\n", source_addr_str);
+
+	if(ethertype_or_len < 1501){
+		printk("Data Length: %hu\n", ethertype_or_len);
+		printk("*************************************\n\n");
+	}
+	else {
+		printk("Ethertype: %s (0x%04x)\n", ethertype_to_str(ethertype_or_len), ethertype_or_len);
+		printk("*************************************\n\n");
+	}
+}
+
+/**
+   @eth_frame: pointer to the beginning of the ethernet frame
+   @frame_size: total length of the supplied ethernet frame **/
+void handle_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
+	uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12)));
+
+	if(ethertype_or_len < 1501){
+		//todo: might have to add some extra handling here
+	}
+	else {
+		if(ethertype_or_len == ETHRTYPE_ARP){
+			handle_received_arp_packet(eth_frame, frame_size);
+		}
+		else if(ethertype_or_len == ETHRTYPE_IPV4){
+			handle_received_ip_packet(eth_frame, frame_size);
+		}
+	}
 }

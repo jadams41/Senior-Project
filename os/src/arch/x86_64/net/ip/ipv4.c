@@ -1,11 +1,12 @@
 #include <stdint-gcc.h>
+#include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ethernet/ethernet.h"
-#include "net/ethernet/realtek/8139too.h"
-#include "net/ip/ipv4.h"
-#include "net/ip/icmp.h"
 #include "net/ip/checksum.h"
+#include "net/ip/icmp.h"
+#include "net/ip/ipv4.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
+#include "types/string.h"
 
 
 extern rt8139_private *global_rtl_priv;
@@ -18,6 +19,59 @@ void ipv4_to_str(ipv4_addr ipv4, char *out){
 	
 	sprintk(out, "%u.%u.%u.%u", ipv4_addr1, ipv4_addr2, ipv4_addr3, ipv4_addr4);
 
+}
+
+/* takes string in format `<0-255>.<0-255>.<0-255>.<0-255>`
+   and returns a unsigned integer representation of the ip address */
+ipv4_addr str_to_ipv4(char *ipv4_str){
+	uint32_t to_return = 0, temp = 0;
+	unsigned int ipv4_len = strlen(ipv4_str);
+	int i, num_periods = 0, num_digits = 0;
+	
+	if(ipv4_len > 15 || ipv4_len < 7){
+		goto err;
+	}
+	for(i = 0; i < ipv4_len; i++){
+		switch(ipv4_str[i]){
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if(++num_digits > 3){
+				goto err;
+			}
+			temp *= 10;
+			temp += (uint32_t)(ipv4_str[i] - '0');
+			break;
+		case '.':
+			if(++num_periods > 3){
+				goto err;
+			}
+			to_return <<= 8;
+			to_return += temp;
+
+			temp = 0;
+			num_digits = 0;
+			break;
+	        default:
+			goto err;
+		}
+	}
+	to_return <<= 8;
+	to_return += temp;
+	return to_return;
+
+err:
+	printk_err("can't convert `%s` to ipv4 address.\n"
+		   "must be of format `<0-255>.<0-255>.<0-255>.<0-255>`",
+		   ipv4_str);
+	return 0;
 }
 
 static int set_version(ipv4_header *header, uint8_t version){

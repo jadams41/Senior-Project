@@ -9,6 +9,10 @@ fat_bs ?= 512
 fat_num_blocks ?= 196575
 fat_blank_img ?= .cache/fat_templates/blank_fat_$(fat_bs)_$(fat_num_blocks).img
 
+# ===== RUNTIME CONFIGURATION VARIABLES =====
+# default static ip address
+STATIC_IP ?= "\"192.168.0.2\""
+
 # ===== COMPILER CONFIGURATION =====
 incl_path := $(shell pwd)/src/arch/x86_64/
 
@@ -149,4 +153,4 @@ $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 #compile c files
 $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.c
 	@mkdir -p $(shell dirname $@)
-	@$(CC) $(CC_OPT) -c -g -I$(incl_path) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone
+	@$(CC) $(CC_OPT) -c -g -I$(incl_path) -DSTATIC_IP=$(STATIC_IP) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone

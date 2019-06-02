@@ -4,7 +4,8 @@
 #include "drivers/pci/pci.h"
 #include "net/arp/arp.h"
 #include "net/ethernet/ethernet.h"
-#include "net/ethernet/realtek/8139too.h"
+#include "net/netdev.h"
+#include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ip/ipv4.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
@@ -28,60 +29,6 @@ void wipe_dma_buffer(uint64_t virt_addr, uint64_t size){
 		buff[i] = 0;
 		i += 1;
 	}
-}
-
-void print_ethertype(uint32_t ethertype){
-	switch(ethertype){
-	case ETHRTYPE_IPV4:
-		printk("IPV4");
-		return;
-	case ETHRTYPE_ARP:
-		printk("ARP");
-		return;
-	case ETHRTYPE_IPV6:
-		printk("IPV6");
-		return;
-	default:
-		printk("Unknown");
-	}
-}
-
-void parse_eth_frame(uint8_t *eth_frame, unsigned int frame_size){
-	/* uint8_t *dest_mac = eth_frame; */
-	/* uint8_t *source_mac = eth_frame + 6; */
-	uint16_t ethertype_or_len = ntohs(*((uint16_t*)(eth_frame + 12)));
-
-        /* hw_addr source_hw_addr = create_hw_addr(source_mac); */
-        /* hw_addr dest_hw_addr = create_hw_addr(dest_mac); */
-
-	/* char *source_addr_str = hw_addr_to_str(source_hw_addr); */
-	/* char *dest_addr_str = hw_addr_to_str(dest_hw_addr); */
-	
-	/* printk("****** Received Ethernet Frame ******\n"); */
-	/* printk("Total Length: %u\n", frame_size); */
-    
-	/* printk("Dest MAC: %s\n", dest_addr_str); */
-	/* printk("Source MAC: %s\n", source_addr_str); */
-
-	if(ethertype_or_len < 1501){
-		//printk("Data Length: %hu\n", ethertype_or_len);
-	}
-	else {
-		//printk("Ethertype: ");
-		//print_ethertype(ethertype_or_len);
-		//printk(" (0x%04x)\n", ethertype_or_len);
-		if(ethertype_or_len == ETHRTYPE_ARP){
-			handle_received_arp_packet(eth_frame, frame_size);
-		}
-		else if(ethertype_or_len == ETHRTYPE_IPV4){
-			handle_received_ip_packet(eth_frame, frame_size);
-		}
-	}
-    
-	/* printk("*************************************\n\n"); */
-
-	/* kfree(source_addr_str); */
-	/* kfree(dest_addr_str); */
 }
 
 /* Inform rtl8139 that packet was successfully received 
@@ -183,10 +130,10 @@ int rtl_rx_interrupt(){
 		outw(rt_ioaddr + RxBufPtr, (uint16_t) (cur_rx - 16));
 
 		//handle received ethernet frame
-		//todo: currently only printing information about packet, implement logic to store received transmission in the kernel
 		eth_frame_beginning = (uint8_t*)(rx_buf + ring_offset + 4);
-		parse_eth_frame(eth_frame_beginning, rx_size);
-	
+		//print_eth_frame(eth_frame_beginning, rx_size);
+	        handle_eth_frame(eth_frame_beginning, rx_size);
+		
 		//acknowledge packet
 		rtl8139_rx_isr_ack(rt_ioaddr);
 	}
@@ -246,8 +193,6 @@ void rtl_isr(int irq, int err){
 	uint32_t rt_ioaddr = global_rt_ioaddr;
 	//rt8139_private *priv = global_rtl_priv;
 	
-	//printk("received rtl interrupt\n", irq);
-	
 	status = inw(rt_ioaddr + IntrStatus);
 	ackstat = status & ~(RxAckBits | TxErr);
 
@@ -258,7 +203,6 @@ void rtl_isr(int irq, int err){
 
 	if(status & RxAckBits){
 		rtl_rx_interrupt();
-		//printk_info("received %d packets\n", received);
 	}
 	
 	if (status & (TxOK | TxErr)) {
@@ -326,10 +270,10 @@ void print_rtl8139_info(rt8139_private *priv){
 	printk_debug("+++++++++++++ RTL8139 INFORMATION +++++++++++++\n");
 	
 	printk_debug("* interrupt line: ");
-	printk("0x%x\n", priv->dev->interrupt_line);
+	printk("0x%x\n", priv->pdev->interrupt_line);
 	
 	printk_debug("* pci base ioaddr: ");
-	printk("0x%x\n", priv->dev->io_addrs->base_addr);
+	printk("0x%x\n", priv->pdev->io_addrs->base_addr);
 
 	printk_debug("* MAC address: ");
 	printk("%02X:%02X:%02X:%02X:%02X:%02X\n", mac_addr_bytes[0],
@@ -352,8 +296,10 @@ void print_rtl8139_info(rt8139_private *priv){
 	printk_debug("++++++++++++++++++++++++++++++++++++++++++++++\n");
 }
 
-int init_rt8139(PCIDevice *dev) {
+net_device *init_rt8139(PCIDevice *pdev) {
+	net_device *dev;
 	rt8139_private *priv;
+
 	uint32_t command;
 	uint32_t rt_ioaddr;
 	uint64_t rx_buffer_virt;
@@ -362,21 +308,22 @@ int init_rt8139(PCIDevice *dev) {
 	uint16_t intr_mask; 
 	int i;
 
+	dev = alloc_netdev("RTL8139", sizeof(rt8139_private));
+	priv = (rt8139_private*)dev->netdev_priv;
+	priv->pdev = pdev;
+	
 	//disable interrupts
 	asm("CLI");
-
+	
 	printk_info("---- Performing initialization of the discovered rtl8139 ----\n");
 	
-	priv = (rt8139_private*)kmalloc(sizeof(rt8139_private));
-	priv->dev = dev;
-
-	IRQ_set_handler(dev->interrupt_line + 0x20, rtl_isr);
-	IRQ_clear_mask(dev->interrupt_line);
+	IRQ_set_handler(pdev->interrupt_line + 0x20, rtl_isr);
+	IRQ_clear_mask(pdev->interrupt_line);
     
 	/* Enable PCI Bus Mastering */
 	// read command register from the device's PCI Configuration space, set bit 2 (bus mastering bit), and write the modified command register
 	printk_info("\tenabling bus mastering for rtl839\n");
-	command = pci_config_read_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, 2);
+	command = pci_config_read_field(pdev->bus, pdev->slot, pdev->func, PCI_CONFIG_COMMAND, 2);
 	command |= 0b100; //enable bus mastering
 	command |= 0b1; //enable I/O space
 	command |= 0b10; //enable Memory space
@@ -390,14 +337,14 @@ int init_rt8139(PCIDevice *dev) {
 		printk_info("\tinterrupts enabled\n");
 	}
     
-	pci_config_write_field(dev->bus, dev->slot, dev->func, PCI_CONFIG_COMMAND, command, 2);
+	pci_config_write_field(pdev->bus, pdev->slot, pdev->func, PCI_CONFIG_COMMAND, command, 2);
 
-	if(!(dev->io_addrs)){
+	if(!(pdev->io_addrs)){
 		printk_err("Supplied rt8139 has no base i/o address, can't initialize\n");
-		return 1;
+		return NULL;
 	}
     
-	rt_ioaddr = global_rt_ioaddr = dev->io_addrs->base_addr;
+	rt_ioaddr = global_rt_ioaddr = pdev->io_addrs->base_addr;
 
 	/* turn on the device */
 	//bring old chips out of low power mode
@@ -415,18 +362,7 @@ int init_rt8139(PCIDevice *dev) {
         mac_addr_int <<= 16;
         mac_addr_int += le32_to_cpu(inl(rt_ioaddr + MAC0 + 4));
 
-	priv->mac_addr = create_hw_addr((uint8_t*)&mac_addr_int);
-
-	//todo figure out how to actually set this up
-	//ens33 ip : 172.16.210.176
-	//virbr0 ip: 192.168.122.1
-	priv->ipv4_addr = 172;
-	priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 16;
-        priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 210;
-        priv->ipv4_addr <<= 8;
-        priv->ipv4_addr += 185;
+	add_dev_addr(dev, create_hw_addr((uint8_t*)&mac_addr_int));
 	
 	/* unlock Config[01234] and BMCR register writes */
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Unlock);
@@ -504,7 +440,7 @@ int init_rt8139(PCIDevice *dev) {
 	//enable interrupts
 	asm("STI");
 	
-	return 0;
+        return dev;
 }
 
 // NOTE: CRC code taken from https://barrgroup.com/Embedded-Systems/How-To/CRC-Calculation-C-Code
@@ -590,8 +526,6 @@ int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
 
 	//disable interrupts
 	asm("CLI");
-
-	parse_eth_frame(data, data_size);
 	
 	if(priv == NULL){
 		printk_err("rtl8139 seemingly not initialized, cannot transmit\n");

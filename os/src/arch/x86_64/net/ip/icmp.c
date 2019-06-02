@@ -1,5 +1,5 @@
 #include <stdint-gcc.h>
-#include "net/ethernet/realtek/8139too.h"
+#include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ip/icmp.h"
 #include "net/ip/ipv4.h"
 #include "net/ip/checksum.h"

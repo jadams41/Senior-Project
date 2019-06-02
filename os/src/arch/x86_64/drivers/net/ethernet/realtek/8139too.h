@@ -3,6 +3,7 @@
 
 #include "drivers/pci/pci.h"
 #include "net/ethernet/ethernet.h"
+#include "net/netdev.h"
 
 #define NUM_TX_DESC 4
 #define MAX_ETH_FRAME_SIZE 1792
@@ -26,7 +27,7 @@
 
 /* private device configuration information structure */
 typedef struct rt8139_private {
-	PCIDevice *dev;
+	PCIDevice *pdev;
 
 	/* miscellaneous information */
         hw_addr mac_addr; //NOTE: the mac address is only going to be six bytes
@@ -47,7 +48,7 @@ typedef struct rt8139_private {
 } rt8139_private;
 
 /* externally accessible functions */
-int init_rt8139(PCIDevice *dev);
+net_device *init_rt8139(PCIDevice *dev);
 int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size);
 
 /* rtl8139 register offsets */

@@ -1,6 +1,6 @@
 #include <stdint-gcc.h>
 #include "arp.h"
-#include "net/ethernet/realtek/8139too.h"
+#include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ethernet/ethernet.h"
 #include "drivers/memory/memoryManager.h"
 #include "utils/byte_order.h"
