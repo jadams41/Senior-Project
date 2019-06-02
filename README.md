@@ -140,24 +140,24 @@ _NOTE: more objectives will likely be added once `Objective 2` has been accompli
                4. Checking host's arp table (using `arp`) and checking for entry: `os_mock_ip -> os_mac_addr`
    - [ ] **Internet Layer**
       - [ ] `IPv4`: _Internet Protocol Version 4_
-         - [ ] Create Internet Protocol infrastructure:
-            - [ ] Create more robust network device infrastructure and data structures (like Linux's `net_device`) for configuring/representing/storing IP information.
-            - [ ] Structs+Functions for representing/parsing/creating IP packets.
-         - [ ] Send and receive/parse mock IP traffic (maybe use `ICMP` or `UDP` "traffic" for this).
-         - [ ] *Figure out what kernel data structures are needed for IP layer*
-      - [ ] `ICMP`: _Internet Control Message Protocol_
-         - [ ] Create ICMP infrastructure:
-            - [ ] OS recognizes and handles `ICMP` packets (probably only need control messages associated with `ping`).
-            - [ ] OS can send relevant `ICMP` requests (probably only need to support control messages associated with `ping`).
-         - [ ] Flush out desired kernel `ICMP` functionality:
-            - [ ] OS automatically handles all incoming `ICMP` traffic
-               - [ ] OS extracts and uses relevant information from received `ICMP` traffic upon arrival.
-               - [ ] OS automatically replies appropriately to all received `ICMP` requests (that are supported).
+         - [X] Create Internet Protocol infrastructure:
+            - [X] Create more robust network device infrastructure and data structures (like Linux's `net_device`) for configuring/representing/storing IP information.
+            - [X] Structs+Functions for representing/parsing/creating IP packets.
+         - [X] Send and receive/parse mock IP traffic (maybe use `ICMP` or `UDP` "traffic" for this).
+         - [X] *Figure out what kernel data structures are needed for IP layer*
+      - [X] `ICMP`: _Internet Control Message Protocol_
+         - [X] Create ICMP infrastructure:
+            - [X] OS recognizes and handles `ICMP` packets (probably only need control messages associated with `ping`).
+            - [X] OS can send relevant `ICMP` requests (probably only need to support control messages associated with `ping`).
+         - [X] Flush out desired kernel `ICMP` functionality:
+            - [X] OS automatically handles all incoming `ICMP` traffic
+               - [X] OS extracts and uses relevant information from received `ICMP` traffic upon arrival.
+               - [X] OS automatically replies appropriately to all received `ICMP` requests (that are supported).
             - [ ] "Userspace" accessible `ping` functionality (can probably be done in a kernel thread):
                - [ ] As similar as possible to running `ping` on linux command line
                - [ ] Outputs same way as linux `ping` utility (to make testing/validating easier).
    - [ ] **Transport Layer**
-      - [ ] `UDP`: _Universal Datagram Protocol_
+      - [X] `UDP`: _Universal Datagram Protocol_
       - [ ] `TCP`: _Transmission Control Protocol_
    - [ ] **Application Layer**
       - [ ] `DHCP`: _Dynamic Host Configuration Protocol_
