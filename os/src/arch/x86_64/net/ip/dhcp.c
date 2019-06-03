@@ -1,6 +1,6 @@
 #include <stdint-gcc.h>
 #include "net/ip/dhcp.h"
-
+#include "drivers/net/ethernet/realtek/8139too.h"
 
 extern rt8139_private *global_rtl_priv;
 
