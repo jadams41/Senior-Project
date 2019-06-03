@@ -309,7 +309,7 @@ net_device *init_rt8139(PCIDevice *pdev) {
 	int i;
 
 	dev = alloc_netdev("RTL8139", sizeof(rt8139_private));
-	priv = (rt8139_private*)dev->netdev_priv;
+	/* global_rtl_priv = */ priv = (rt8139_private*)dev->netdev_priv;
 	priv->pdev = pdev;
 	
 	//disable interrupts

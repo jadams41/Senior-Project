@@ -13,6 +13,7 @@
 #include "net/ethernet/ethernet.h"
 #include "net/ip/icmp.h"
 #include "net/ip/ipv4.h"
+#include "net/ip/tcp.h"
 #include "net/ip/udp.h"
 #include "net/netdev.h"
 #include "test/snakes/snakes.h"
@@ -152,12 +153,14 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	}
 #endif
 	
-	while (!enabled) ;
-	
 	if (num_pci_devs) {
 		init_pci_devices();
 	}
 
+	while (!enabled) ;
+	test_tcp_syn();
+	while (1) ;
+	
 	while(1){
 		while (!enabled) ;
 		send_ping();
