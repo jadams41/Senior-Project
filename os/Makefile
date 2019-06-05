@@ -13,6 +13,9 @@ fat_blank_img ?= .cache/fat_templates/blank_fat_$(fat_bs)_$(fat_num_blocks).img
 # default static ip address
 STATIC_IP ?= "\"172.16.210.187\""
 
+# random seed
+RAND_SEED = 15
+
 # ===== COMPILER CONFIGURATION =====
 incl_path := $(shell pwd)/src/arch/x86_64/
 
@@ -61,7 +64,7 @@ c_object_files := $(patsubst src/arch/$(arch)/%.c, \
 	$(build_dir)/arch/$(arch)/%.o, $(c_source_files))
 
 # targets which do not produce file with name of target
-.PHONY: all clean run iso fat
+.PHONY: all clean run iso fat generate_random_seed
 
 all: $(kernel)
 
@@ -86,6 +89,12 @@ run: $(iso)
 	-net nic,model=rtl8319 \
 	-net socket,listen=:8010 \
 	-no-kvm-irqchip
+
+generate_random_seed: FORCE
+	$(eval RAND_SEED := $(shell bash -c 'echo \"$$RANDOM\"'))
+	@echo "Random seed = $(RAND_SEED)"
+
+FORCE:
 
 #-net bridge,br=br000
 # -netdev tap,id=mynet0,ifname=qtap0,script=no,downscript=no
@@ -163,6 +172,6 @@ $(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
 	@nasm -felf64 $< -o $@
 
 #compile c files
-$(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.c
+$(build_dir)/arch/$(arch)/%.o: src/arch/$(arch)/%.c generate_random_seed
 	@mkdir -p $(shell dirname $@)
-	@$(CC) $(CC_OPT) -c -g -I$(incl_path) -DSTATIC_IP=$(STATIC_IP) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone
+	@$(CC) $(CC_OPT) -c -g -I$(incl_path) -DSTATIC_IP=$(STATIC_IP) -DRAND_SEED=$(RAND_SEED) $< -o $@ -Wall -Werror -fno-builtin -mno-red-zone

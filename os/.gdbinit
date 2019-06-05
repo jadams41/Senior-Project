@@ -8,6 +8,7 @@ skip printk
 skip printk_err
 skip printk_warn
 skip printk_info
+skip printk_debug
 skip printk_dir
 
 # skip memory allocation
@@ -24,3 +25,8 @@ skip outl
 
 skip entry_present
 skip strip_present_bits
+
+skip ntohl
+skip ntohs
+skip htonl
+skip htons
