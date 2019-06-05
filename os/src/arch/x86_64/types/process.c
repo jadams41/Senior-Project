@@ -9,7 +9,7 @@ extern uint64_t saved_rbp;
 extern void perform_syscall(int);
 
 PROC_context *curProc = 0, *nextProc = 0, rootProc;
-static int numProcesses = 0;
+int numProcesses = 0;
 
 PROC_context *procListHead = 0;
 
@@ -137,13 +137,16 @@ void PROC_block_on(ProcessQueue *pq, int enable_ints){
         }
         //found the process in the list
         if(listWalker->pid == mypid){
-            if(!lastNode){
+	    
+            addCtxToPQ(pq, listWalker);
+
+	    if(!lastNode){
                 procListHead = listWalker->next;
             }
             else {
                 lastNode->next = listWalker->next;
             }
-            addCtxToPQ(pq, listWalker);
+
             if(enable_ints)
                 asm("STI");
             break;
@@ -156,15 +159,18 @@ void PROC_block_on(ProcessQueue *pq, int enable_ints){
 }
 
 void PROC_unblock_all(ProcessQueue *pq){
+    if(!pq->head){
+	return;
+    }
     if(!procListHead){
         procListHead = pq->head;
     }
     else {
         PROC_context *procPtr = procListHead;
-        while(procPtr->next) ;
+        while(procPtr->next) procPtr = procPtr->next;
         procPtr->next = pq->head;
     }
-    procListHead = (PROC_context*)0;
+    pq->head = (PROC_context*)0;
 }
 
 void PROC_unblock_head(ProcessQueue *pq){

@@ -24,6 +24,7 @@
 #include "utils/byte_order.h"
 #include "utils/parseMultiboot.h"
 #include "utils/printk.h"
+#include "utils/random.h"
 #include "utils/utils.h"
 
 /* assembly routine wrappers */
@@ -152,6 +153,11 @@ int kmain(void *multiboot_point, unsigned int multitest)
 		add_ipv4_addr(first->dev, static_ip);
 	}
 #endif
+
+#ifdef RAND_SEED
+	printk_debug("random seed generated during build = %u\n", RAND_SEED);
+	srand(RAND_SEED);
+#endif	
 	
 	if (num_pci_devs) {
 		init_pci_devices();
@@ -163,7 +169,7 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	//send_test_udp();
         //send_ping();
 	//test_tcp_syn();
-	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 57746, 2057);
+	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 0, 2090);
 	
 	while (1) {
 		PROC_run();
