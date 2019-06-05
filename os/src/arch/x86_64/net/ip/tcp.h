@@ -100,7 +100,7 @@ struct tcp_connection {
 
 	uint16_t window_size;
 
-	uint64_t new_data_avail;
+	uint8_t new_data_avail;
 	uint8_t received[IPV4_DATA_LEN];
 	uint8_t *received_top;
 

@@ -573,7 +573,7 @@ int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
 
 	priv->cur_tx += 1;
 
-	printk_debug("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
+	//printk_debug("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
 	
 	//enable interrupts
 	asm("STI");

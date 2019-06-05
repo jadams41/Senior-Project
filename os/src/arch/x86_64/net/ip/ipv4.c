@@ -223,7 +223,7 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 	
 	switch(version){
 	case IPV4_VERSION:
-		printk_info("- Received IPv4 Packet ");
+		//printk_info("- Received IPv4 Packet ");
 		/* printk("\tHeader Length = %u\n", ihl * 4); */
 		/* printk("\tDSCP = 0x%x\n", dscp); */
 		/* printk("\tECN = 0b%d%d\n", (ecn & 0b10) >> 1, ecn & 0b01); */
@@ -235,18 +235,18 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 
 		switch(ip_head->protocol){
 		case IPV4_PROTO_ICMP:
-			printk_info("(Protocol = ICMP)\n");
+			//printk_info("(Protocol = ICMP)\n");
 			handle_received_icmp_packet(ip_head);
 			break;
 		case IPV4_PROTO_TCP:
-			printk_info("(Protocol = TCP)\n");
+			//printk_info("(Protocol = TCP)\n");
 			handle_received_tcp_segment(ip_head);
 			break;
 		case IPV4_PROTO_UDP:
-			printk_info("(Protocol = UDP)\n");
+			//printk_info("(Protocol = UDP)\n");
 			break;
 		default:
-			printk_info("(Protocol = Unrecognized [0x%x])\n", ip_head->protocol);
+			//printk_info("(Protocol = Unrecognized [0x%x])\n", ip_head->protocol);
 			break;
 		}
 
