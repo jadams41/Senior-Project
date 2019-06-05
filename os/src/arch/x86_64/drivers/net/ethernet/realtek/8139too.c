@@ -362,7 +362,9 @@ net_device *init_rt8139(PCIDevice *pdev) {
         mac_addr_int <<= 16;
         mac_addr_int += le32_to_cpu(inl(rt_ioaddr + MAC0 + 4));
 
-	add_dev_addr(dev, create_hw_addr((uint8_t*)&mac_addr_int));
+	priv->mac_addr = create_hw_addr((uint8_t*)&mac_addr_int);
+	add_dev_addr(dev, priv->mac_addr);
+	priv->ipv4_addr = str_to_ipv4(STATIC_IP);
 	
 	/* unlock Config[01234] and BMCR register writes */
 	outb(rt_ioaddr + Cfg9346, Cfg9346_Unlock);

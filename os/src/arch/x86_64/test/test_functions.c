@@ -337,21 +337,9 @@ void send_test_udp(){
 
 	uint8_t data[10] = {0xAB, 0xBC, 0xCD, 0xDE, 0xEF, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
 
-	ipv4_addr source = 99;
-	source <<= 8;
-	source += 100;
-	source <<= 8;
-	source += 101;
-	source <<= 8;
-	source += 102;
+	ipv4_addr source = str_to_ipv4(STATIC_IP);
 
-	ipv4_addr dest = 33;
-        dest <<= 8;
-        dest += 34;
-	dest <<= 8;
-	dest += 35;
-	dest <<= 8;
-	dest += 36;
+	ipv4_addr dest = str_to_ipv4("172.16.210.183");
 	
 	udp_frame_len = create_udp_packet(source, 55, dest, 106, data, 10, &udp_frame);
 	rtl8139_transmit_packet(udp_frame, udp_frame_len);
@@ -361,22 +349,19 @@ void send_ping(){
 	uint8_t *icmp_frame;
 	int icmp_frame_len;
 
+	char src_str[20];
+	char dest_str[20];
+	
 	//bridge's ip address: 169.254.6.164
-	ipv4_addr source = 169;
-	source <<= 8;
-	source += 254;
-	source <<= 8;
-	source += 6;
-	source <<= 8;
-	source += 168;
+	ipv4_addr source = str_to_ipv4(STATIC_IP);
+	
+	ipv4_addr dest = str_to_ipv4("8.8.8.8");
 
-	ipv4_addr dest = 169;
-        dest <<= 8;
-        dest += 254;
-	dest <<= 8;
-	dest += 6;
-	dest <<= 8;
-	dest += 164;
+	ipv4_to_str(source, src_str);
+	ipv4_to_str(dest, dest_str);
+
+
+	printk("about to ping from `%s` to `%s`\n", src_str, dest_str);
 	
 	icmp_frame_len = create_icmp_echo_packet(source, dest, ICMP_TYPE_ECHO_REQUEST, 0xBEEF, 1, NULL, 0, &icmp_frame);
 	rtl8139_transmit_packet(icmp_frame, icmp_frame_len);

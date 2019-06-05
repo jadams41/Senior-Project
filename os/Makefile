@@ -11,7 +11,7 @@ fat_blank_img ?= .cache/fat_templates/blank_fat_$(fat_bs)_$(fat_num_blocks).img
 
 # ===== RUNTIME CONFIGURATION VARIABLES =====
 # default static ip address
-STATIC_IP ?= "\"192.168.0.2\""
+STATIC_IP ?= "\"172.16.210.187\""
 
 # ===== COMPILER CONFIGURATION =====
 incl_path := $(shell pwd)/src/arch/x86_64/
@@ -87,19 +87,31 @@ run: $(iso)
 	-net socket,listen=:8010 \
 	-no-kvm-irqchip
 
+#-net bridge,br=br000
 # -netdev tap,id=mynet0,ifname=qtap0,script=no,downscript=no
 # ,netdev=mynet0,macaddr=52:55:00:d1:55:01
+# -net bridge,br=virbr0 
 runf: $(fat)
+	#sudo /etc/qemu-ifup tap5
 	@sudo $(vm_prog) \
 	-machine ubuntu \
 	-s -drive format=raw,file=$(fat) \
 	-serial stdio \
-	-net nic,macaddr=fa:fa:fa:fa:fa:fa,model=rtl8139 \
-	-net bridge,br=virbr0 \
+	-netdev tap,id=mynet0,ifname=tap6,script=no,downscript=no \
+	-net nic,model=rtl8139,netdev=mynet0 \
 	-no-kvm-irqchip
+	#sudo /etc/qemu-ifdown tap5
 
 runb: $(iso)
 	@bochs -q
+
+runlinux:
+	@sudo $(vm_prog) \
+	-boot d \
+	-cdrom /dev/cdrom \
+	-netdev tap,id=mynet0,ifname=tap6,script=no,downscript=no \
+	-net nic,model=rtl8139,netdev=mynet0 \
+	-m 512 -hda mydisk.img
 
 iso: $(iso)
 

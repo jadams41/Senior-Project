@@ -1,12 +1,14 @@
 #include <stdint-gcc.h>
+
 #include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ethernet/ethernet.h"
 #include "net/ip/checksum.h"
 #include "net/ip/icmp.h"
 #include "net/ip/ipv4.h"
+#include "net/ip/tcp.h"
+#include "types/string.h"
 #include "utils/byte_order.h"
 #include "utils/printk.h"
-#include "types/string.h"
 
 
 extern rt8139_private *global_rtl_priv;
@@ -238,6 +240,7 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 			break;
 		case IPV4_PROTO_TCP:
 			printk_info("\tProtocol: TCP\n");
+			handle_received_tcp_segment(ip_head);
 			break;
 		case IPV4_PROTO_UDP:
 			printk_info("\tProtocol: UDP\n");
@@ -307,7 +310,7 @@ int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, ui
 
 	//calculate checksum
 	unsigned short checksum = in_cksum((unsigned short*)head, ihl * 4);
-	head->header_check = htons(checksum);
+	head->header_check = checksum;//htons(checksum);
 
 	//copy data into packet
 	int i;
@@ -315,8 +318,9 @@ int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, ui
 	for(i = 0; i < data_len; i++){
 	        packet_data[i] = data[i];
 	}
-
-	uint8_t hw_dest_arr[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73};
+	
+	/* uint8_t hw_dest_arr[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73}; //DOESN'T WORK */
+	uint8_t hw_dest_arr[6] = {0x00, 0x0c, 0x29, 0x60, 0xa0, 0x9a}; //only working when set to the same mac address as the bridge
 	hw_addr hw_dest = create_hw_addr(hw_dest_arr); //todo replace this with router's mac when I figure out how to get that information
 	hw_addr hw_src = global_rtl_priv->mac_addr;
 	

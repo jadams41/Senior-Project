@@ -157,18 +157,14 @@ int kmain(void *multiboot_point, unsigned int multitest)
 		init_pci_devices();
 	}
 
-	while (!enabled) ;
-	test_tcp_syn();
-	while (1) ;
+	init_tcp_state();
 	
-	while(1){
-		while (!enabled) ;
-		send_ping();
-		enabled = 0;
-	}
-	/* uint64_t initFAT32Params[2] = {2, (uint64_t)ata}; */
-	/* PROC_create_kthread(initFAT32, initFAT32Params); */
-
+	while (!enabled) ;
+	//send_test_udp();
+        //send_ping();
+	//test_tcp_syn();
+	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 57746, 2023);
+	
 	while (1) {
 		PROC_run();
 		asm("hlt");
