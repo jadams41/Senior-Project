@@ -12,6 +12,7 @@ static void print_flags(tcp_flags f);
 static int flags_equal(tcp_flags f1, tcp_flags f2);
 static uint8_t get_data_offset(tcp_header *head);
 static tcp_flags get_flags(tcp_header *head);
+static uint16_t get_flags_raw(tcp_header *head);
 static int set_data_offset_and_flags(tcp_header *head, uint8_t data_offset, tcp_flags flags);
 static int create_tcp_segment(tcp_connection *conn, uint8_t data_offset, tcp_flags flags, uint16_t urgent_ptr, uint8_t *data, uint32_t data_len, uint8_t **packet_return);
 
@@ -75,9 +76,10 @@ static void block_until_tcp_received(tcp_connection *conn, int ints_back_on){
 		asm("STI");
 }
 
-static void block_until_specific_tcp_received(tcp_connection *conn, tcp_flags expected_flags, ack_number expected_ack, int ints_back_on){
+static void block_until_specific_tcp_received(tcp_connection *conn, uint16_t expected_flags, ack_number expected_ack, int ints_back_on){
 	tcp_header *tcp_head = NULL;
 	tcp_flags recvd_flags = {0,0,0,0,0,0,0,0,0};
+	uint16_t recvd_flags_raw = 0;
 	ack_number recvd_ack = 0;
 	
 	while(1){
@@ -87,10 +89,16 @@ static void block_until_specific_tcp_received(tcp_connection *conn, tcp_flags ex
 
 		recvd_ack = ntohl(tcp_head->ack_num);
 		recvd_flags = get_flags(tcp_head);
+		recvd_flags_raw = get_flags_raw(tcp_head);
 
-		//todo add more handling code here for error cases (dropped packets, wrong ack, etc)
-		if(flags_equal(expected_flags, recvd_flags) && expected_ack == recvd_ack)
-			break;
+		/* check if all flags we were expecting are set (note others may be set as well, but that's fine) */
+		if((expected_flags & recvd_flags_raw) == expected_flags){
+			//todo add more handling code here for error cases (dropped packets, wrong ack, etc)
+			if(expected_ack == recvd_ack)
+				break;
+		}
+
+
 	}
 
 	printk("received TCP response:\n");
@@ -106,7 +114,7 @@ static void block_until_specific_tcp_received(tcp_connection *conn, tcp_flags ex
 
 static void wait_for_synack(tcp_connection *conn){
 	/* expecting ACK-SYN from server */
-	tcp_flags expected_resp_flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 1, .psh = 0, .rst = 0, .syn = 1, .fin = 0};
+        uint16_t expected_resp_flags = TCP_FLAGMASK_SYN | TCP_FLAGMASK_ACK;
 
         /* block until we get an ACK-SYN from the server */
 	block_until_specific_tcp_received(conn, expected_resp_flags, conn->cur_host_seq + 1, 0);
@@ -178,6 +186,8 @@ static void perform_tcp_handshake(tcp_connection *conn){
 	rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
 	/* connection should now be established */
 	conn->cur_state = TCP_STATE_ESTABLISHED;
+
+	//conn->cur_host_seq += 1; //todo figure out if this is universally accurate
 }
 
 /* returns 0 if everything received correctly,
@@ -197,7 +207,8 @@ static int handle_received_tcp_data(tcp_connection *conn){
 	uint64_t data_len = conn->new_data_avail - (data_offset * 4);
 
 	/* update the sequence and ack numbers */
-	
+	conn->cur_host_seq = ntohl(head->ack_num);
+	conn->last_remote_seq = ntohl(head->seq_num) + 1; //todo figure out
 	
 	/* todo replace with something more useful... just printing data right now */
 	printk("received %u bytes of data in sequence #%u\n", data_len, head->seq_num);
@@ -217,25 +228,80 @@ static int handle_received_tcp_data(tcp_connection *conn){
 	
 }
 
-static int __attribute__((unused)) tcp_receive_data(tcp_connection *conn){
+static int tcp_receive_data(tcp_connection *conn){
 	uint8_t *tcp_frame;
 	int tcp_frame_len;
-	tcp_flags flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 1, .psh = 0, .rst = 0, .syn = 0, .fin = 0};
-
+	tcp_flags flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 1, .psh = 0, .rst = 0, .fin = 0};
+	
 	/* receive data until fin seen */
 	while(1){
 		/* wait for data from remote */
-		block_until_specific_tcp_received(conn, flags, conn->cur_host_seq + 1, 0);
+		block_until_specific_tcp_received(conn, TCP_FLAGMASK_ACK, conn->cur_host_seq, 0);
 
 		/* handle received data */
-		handle_received_tcp_data(conn);
+		int recvd_data_status = handle_received_tcp_data(conn);
 		conn->new_data_avail = 0;
 
+		if(recvd_data_status == 1){
+			conn->cur_state = TCP_STATE_CLOSEWAIT;
+			break;
+		}
+		
 		/* ack the received data */
 		tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame);
 		rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
 		
 	}
+
+	return 0;
+}
+
+static int tcp_perform_term_handshake(tcp_connection *conn){
+	uint8_t *tcp_frame;
+	int tcp_frame_len;
+	tcp_flags flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 1, .psh = 0, .rst = 0, .fin = 0};
+
+	/* case: we are initiating the tcp connection termination handshake */
+	if(conn->cur_state == TCP_STATE_ESTABLISHED){
+		//send fin
+
+		//goto STATE_FINWAIT1, wait for ack of sent fin
+
+		//receive ack of sent fin, goto STATE_FINWAIT2, wait for fin
+
+		//receive fin, goto STATE_TIMEWAIT
+
+		printk_err("not implemented yet\n");
+		asm("hlt");
+	}
+	/* case: other device has initiated the the tcp connection termination handshake */
+	else if(conn->cur_state == TCP_STATE_CLOSEWAIT){
+		//send ack, goto STATE_CLOSEWAIT
+		/* tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame); */
+		/* rtl8139_transmit_packet(tcp_frame, tcp_frame_len); */
+		/* conn->cur_state = TCP_STATE_CLOSEWAIT; */
+		
+		/* //send fin, goto STATE_LASTACK */
+		/* flags.ack = 0; */
+		/* flags.fin = 1; */
+	        /* tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame); */
+		/* rtl8139_transmit_packet(tcp_frame, tcp_frame_len); */
+		/* conn->cur_state = TCP_STATE_LASTACK; */
+		flags.fin = 1;
+	        tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame);
+		rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
+		conn->cur_state = TCP_STATE_LASTACK;
+
+		//wait for ack of sent fin, close connection when received
+		block_until_specific_tcp_received(conn, TCP_FLAGMASK_ACK, conn->cur_host_seq + 1, 0);
+		conn->cur_state = TCP_STATE_CLOSE;
+		
+	}
+	else {
+		printk_err("you are currently in state = %d, doesn't make sense for performing tcp handshake\n", conn->cur_state);
+		asm("hlt");
+	}
+	
 
 	return 0;
 }
@@ -302,10 +368,15 @@ void establish_tcp_connection(void *params){
 		tcp_state.num_connections += 1;
 	}
 	asm("STI");
-	
+
+	//attempt to establish connection
 	perform_tcp_handshake(new_connection);
 
-	//tcp_receive_data(new_connection);
+	//receive data until fin is received
+	tcp_receive_data(new_connection);
+
+	//send ACK of received FIN, send our own FIN, and then wait for final ACK of FIN
+	tcp_perform_term_handshake(new_connection);
 }
 
 static void print_flags(tcp_flags f){
@@ -347,8 +418,42 @@ static void print_flags(tcp_flags f){
 	
 }
 
+/* todo fix this, its so gross 
+ * returns 1 if all expected flags set otherwise 0 */
+static int __attribute__((unused)) flags_set(tcp_flags flags, uint16_t expected_set_flags){
+	if(expected_set_flags & TCP_FLAGMASK_NS && !flags.ns){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_CWR && !flags.cwr){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_ECE && !flags.ece){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_URG && !flags.urg){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_ACK && !flags.ack){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_PSH && !flags.psh){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_RST && !flags.rst){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_SYN && !flags.syn){
+		return 0;
+	}
+	if(expected_set_flags & TCP_FLAGMASK_FIN && !flags.fin){
+		return 0;
+	}
+
+	return 1;
+}
+
 /* returns 0 if not equal and 1 if equal */
-static int flags_equal(tcp_flags f1, tcp_flags f2){
+static int __attribute__((unused)) flags_equal(tcp_flags f1, tcp_flags f2){
 	if(f1.ns != f2.ns)
 		return 0;
 	if(f1.cwr != f2.cwr)
@@ -403,6 +508,11 @@ static tcp_flags get_flags(tcp_header *head){
 		flags.fin = 1;
 
 	return flags;
+}
+
+static uint16_t get_flags_raw(tcp_header *head){
+	uint16_t dataoff_and_flags = ntohs(head->data_offset_and_flags);
+        return dataoff_and_flags & TCP_FLAGMASK_ALL;
 }
 
 static int set_data_offset_and_flags(tcp_header *head, uint8_t data_offset, tcp_flags flags){

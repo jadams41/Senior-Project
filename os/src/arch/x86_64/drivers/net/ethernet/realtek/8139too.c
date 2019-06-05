@@ -499,23 +499,29 @@ static int copy_data_with_checksum(uint8_t *data, uint64_t data_size, uint64_t t
 	/* if(!crc_initialized){ */
 	/* 	crcInit(); */
 	/* } */
-	printk("***** SENDING ETH FRAME *****\n");
+	if(0){
+		printk("***** SENDING ETH FRAME *****\n");
+	}
 	/* Copy data byte by byte while generating crc */
 	for(i = 0; i < data_size;){
 		cur_byte = data[i++];
 		/* modified_cur_byte = cur_byte ^ (remainder >> (WIDTH - 8)); */
 		/* remainder = crcTable[modified_cur_byte] ^ (remainder << 8); */
-		printk("%02hx ", cur_byte);
-	        if(i % 16 == 0){
-			printk("\n");
-		}
-		else if(i % 8 == 0){
-			printk(" ");
+		if(0){
+			printk("%02hx ", cur_byte);
+			if(i % 16 == 0){
+				printk("\n");
+			}
+			else if(i % 8 == 0){
+				printk(" ");
+			}
 		}
 		*tx_buf_cur = cur_byte;
 		tx_buf_cur += 1;
 	}
-	printk("\n****************************\n");
+	if(0){
+		printk("\n****************************\n");
+	}
 
 	return 0;
 }

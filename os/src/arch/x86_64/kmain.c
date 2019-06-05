@@ -163,7 +163,7 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	//send_test_udp();
         //send_ping();
 	//test_tcp_syn();
-	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 57746, 2023);
+	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 57746, 2057);
 	
 	while (1) {
 		PROC_run();

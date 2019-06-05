@@ -46,6 +46,8 @@ struct tcp_pseudo_header {
 #define TCP_FLAGMASK_SYN 0b0000000000000010
 #define TCP_FLAGMASK_FIN 0b0000000000000001
 
+#define TCP_FLAGMASK_ALL 0b0000000111111111
+
 
 /* TCP flags (network order in packet) */
 typedef struct tcp_flags tcp_flags;

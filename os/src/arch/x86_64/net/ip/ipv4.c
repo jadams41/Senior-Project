@@ -223,7 +223,7 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 	
 	switch(version){
 	case IPV4_VERSION:
-		printk_info("- Received IPv4 Packet\n");
+		printk_info("- Received IPv4 Packet ");
 		/* printk("\tHeader Length = %u\n", ihl * 4); */
 		/* printk("\tDSCP = 0x%x\n", dscp); */
 		/* printk("\tECN = 0b%d%d\n", (ecn & 0b10) >> 1, ecn & 0b01); */
@@ -235,33 +235,35 @@ void handle_received_ip_packet(uint8_t *frame, unsigned int frame_len){
 
 		switch(ip_head->protocol){
 		case IPV4_PROTO_ICMP:
-			printk_info("\tProtocol: ICMP\n");
+			printk_info("(Protocol = ICMP)\n");
 			handle_received_icmp_packet(ip_head);
 			break;
 		case IPV4_PROTO_TCP:
-			printk_info("\tProtocol: TCP\n");
+			printk_info("(Protocol = TCP)\n");
 			handle_received_tcp_segment(ip_head);
 			break;
 		case IPV4_PROTO_UDP:
-			printk_info("\tProtocol: UDP\n");
+			printk_info("(Protocol = UDP)\n");
 			break;
 		default:
-			printk_info("\tProtocol: Unrecognized (0x%x)\n", ip_head->protocol);
+			printk_info("(Protocol = Unrecognized [0x%x])\n", ip_head->protocol);
 			break;
 		}
 
-		printk("\tHeader Checksum: 0x%x\n", ntohs(ip_head->header_check));
+		if(0){
+			printk("\tHeader Checksum: 0x%x\n", ntohs(ip_head->header_check));
 
-	        ipv4_to_str(ntohl(ip_head->source), source_ip_str);
-		ipv4_to_str(ntohl(ip_head->dest), dest_ip_str);
-		printk("\tSource IPv4 address: %s\n", source_ip_str);
-		printk("\tDestination IPv4 address: %s\n", dest_ip_str);
+			ipv4_to_str(ntohl(ip_head->source), source_ip_str);
+			ipv4_to_str(ntohl(ip_head->dest), dest_ip_str);
+			printk("\tSource IPv4 address: %s\n", source_ip_str);
+			printk("\tDestination IPv4 address: %s\n", dest_ip_str);
+		}
 		break;
 	default:
 		printk_warn("\treceived ip packet with version=%u don't know how to handle!\n", version);
 		break;
 	}
-	printk("\n");
+	/* printk("\n"); */
 }
 
 /**
@@ -320,7 +322,8 @@ int create_ipv4_packet(ipv4_proto protocol, ipv4_addr source, ipv4_addr dest, ui
 	}
 	
 	/* uint8_t hw_dest_arr[6] = {0x52, 0x54, 0x00, 0x60, 0x7c, 0x73}; //DOESN'T WORK */
-	uint8_t hw_dest_arr[6] = {0x00, 0x0c, 0x29, 0x60, 0xa0, 0x9a}; //only working when set to the same mac address as the bridge
+	uint8_t hw_dest_arr[6] = {0x00, 0x0c, 0x29, 0x60, 0xa0, 0x9a}; // working when set to the same mac address as the bridge
+	/* uint8_t hw_dest_arr[6] = {0x00, 0x50, 0x56, 0xf4, 0x5a, 0x5d}; //MAC ADDR of Default gateway, add logic to arp for this when unknown instead */
 	hw_addr hw_dest = create_hw_addr(hw_dest_arr); //todo replace this with router's mac when I figure out how to get that information
 	hw_addr hw_src = global_rtl_priv->mac_addr;
 	
