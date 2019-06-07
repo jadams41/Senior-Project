@@ -10,6 +10,7 @@
 #include "utils/byte_order.h"
 #include "utils/printk.h"
 #include "utils/utils.h"
+#include "drivers/pic/pic.h"
 
 /* RealTek RTL-8139 Fast Ethernet driver */
 static const unsigned int rtl8139_tx_config =
@@ -318,7 +319,7 @@ net_device *init_rt8139(PCIDevice *pdev) {
 	printk_info("---- Performing initialization of the discovered rtl8139 ----\n");
 	
 	IRQ_set_handler(pdev->interrupt_line + 0x20, rtl_isr);
-	IRQ_clear_mask(pdev->interrupt_line);
+        PIC_enable_irq(pdev->interrupt_line);
     
 	/* Enable PCI Bus Mastering */
 	// read command register from the device's PCI Configuration space, set bit 2 (bus mastering bit), and write the modified command register

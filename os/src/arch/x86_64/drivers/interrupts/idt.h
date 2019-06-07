@@ -1,15 +1,21 @@
 #ifndef INTERRUPT
 #define INTERRUPT
 
-#define KEYBOARD_IRQ 1
-#define SLAVE_PIC_IRQ 2
-#define SERIAL_COM2_IRQ 3
-#define SERIAL_COM4_IRQ 3
-#define SERIAL_COM1_IRQ 4
-#define SERIAL_COM3_IRQ 4
-#define PRIMARY_ATA_CHANNEL_IRQ 14
-#define SECONDARY_ATA_CHANNEL_IRQ 14
+#define KEYBOARD_IRQ              1
+#define SLAVE_PIC_IRQ             2
+#define SERIAL_COM2_IRQ           3
+#define SERIAL_COM4_IRQ           3
+#define SERIAL_COM1_IRQ           4
+#define SERIAL_COM3_IRQ           4
 
+#define CMOS_RTC_IRQ              8
+#define FREE_OR_NIC1_IRQ          9
+#define FREE_OR_NIC2_IRQ          10
+#define FREE_OR_NIC3_IRQ          11
+#define MOUSE_IRQ                 12
+#define FPU_IRQ                   13
+#define PRIMARY_ATA_CHANNEL_IRQ   14
+#define SECONDARY_ATA_CHANNEL_IRQ 15
 
 #define NUM_PRIV_STACKS 3
 #define NUM_INTERRUPT_STACKS 7
@@ -35,6 +41,8 @@
 #define SIMD_FLOATING_POINT_EX 19
 #define VIRTUALIZATION_EX 20
 #define SECURITY_EX 30
+
+/* other interrupt vectors */
 #define SYSCALL_VECTOR 0x80
 
 /**

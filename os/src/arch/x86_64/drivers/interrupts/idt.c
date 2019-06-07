@@ -1,13 +1,14 @@
 #include <stdint-gcc.h>
-#include "utils/printk.h"
-#include "drivers/ps2/ps2Driver.h"
-#include "drivers/serial/serial.h"
+#include "drivers/block/blockDeviceDriver.h"
 #include "drivers/interrupts/idt.h"
 #include "drivers/memory/memoryManager.h"
-#include "utils/utils.h"
-#include "types/process.h"
+#include "drivers/pic/pic.h"
 #include "drivers/ps2/keyboard.h"
-#include "drivers/block/blockDeviceDriver.h"
+#include "drivers/ps2/ps2Driver.h"
+#include "drivers/serial/serial.h"
+#include "types/process.h"
+#include "utils/printk.h"
+#include "utils/utils.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -711,7 +712,7 @@ void IRQ_set_handler(int irq, void *handler){
 }
 
 //initialize all things required for having separate stacks for certain faults
-static void __attribute__((unused)) ist_init(){
+static void ist_init(){
     //initialize the TSS
     tss.IST1 = (uint64_t)ist_stack0 + 4096;
     tss.IST2 = (uint64_t)ist_stack1 + 4096;
@@ -805,37 +806,9 @@ void idt_init(void){
         IRQ_set_handler(i, (void*)0);
     }
 
-    /* here are the ports for the 2 PICs
-     *
-     * PIC1 cmd: 0x20 data: 0x21
-     * PIC2 cmd: 0xA0 data: 0xA1
-     */
-
-    /* ICW1 - begin initialization of the PIC */
-    outby(0x20, 0x11);
-    outby(0xA0, 0x11);
-
-    /* ICW2 - remap the offset address of IDT */
-    /*
-     * In x86 protected mode, we have to remap the PICs beyond 0x20 because
-     * Intel reserved the first 32 interrupts for cpu exceptions
-     */
-    outby(0x21, 0x20);
-    //second PIC starts 8 lines after the first because each has 8 lines
-    outby(0xA1, 0x28);
-
-    /* ICW3 - setup cascading */
-    outby(0x21, 0x00);
-    outby(0xA1, 0x00);
-
-    /* ICW4 - environment info */
-    outby(0x21, 0x01);
-    outby(0xA1, 0x01);
-
-    //mask all interrupts
-    outby(0x21, 0xff);
-    outby(0xA1, 0xff);
-
+    PIC_init();
+    PIC_mask_all_interrupts();
+    
     //todo, move this struct to the header file
     struct {
 	uint16_t length;
@@ -858,39 +831,10 @@ void idt_init(void){
     ist_init();
 }
 
-void IRQ_set_mask(int IRQLine){
-    uint16_t port;
-    uint8_t value;
-
-    if(IRQLine < 8){
-        port = 0x21;
-    }
-    else {
-        port = 0xA1;
-        IRQLine -= 8;
-    }
-    value = inby(port) | (1 << IRQLine);
-    outby(port, value);
-}
-
-void IRQ_clear_mask(int IRQLine){
-    uint16_t port;
-    uint8_t value;
-
-    if(IRQLine < 8) {
-        port = 0x21;
-    } else {
-        port = 0xA1;
-        IRQLine -= 8;
-    }
-    value = inby(port) & ~(1 << IRQLine);
-    outby(port, value);
-}
-
 void generic_c_isr(int irq, int err, void *args){
     disableSerialPrinting();
     void (*loadedHandler)(int, int) = c_ISRs[irq];
-
+    
     if(loadedHandler == 0){
         //interrupt was triggered without a loaded isr in the IDT
         printk_err("received interrupt on IRQ %d, however there was no ISR installed\n", irq);
@@ -906,12 +850,10 @@ void generic_c_isr(int irq, int err, void *args){
         }
     }
 
-    if(irq >= 0x20 && irq < 0x30){
-        if(irq > 0x28){
-        	outby(0xA0, 0x20);
-        }
-        outby(0x20, 0x20);
-	}
+    if(PIC_irq_from_pic1(irq) || PIC_irq_from_pic2(irq)){
+	    PIC_end_of_interrupt(irq);
+    }
+    
     enableSerialPrinting();
 }
 

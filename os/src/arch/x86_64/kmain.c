@@ -6,6 +6,7 @@
 #include "drivers/memory/memoryManager.h"
 #include "drivers/net/ethernet/realtek/8139too.h"
 #include "drivers/pci/pci.h"
+#include "drivers/pic/pic.h"
 #include "drivers/ps2/keyboard.h"
 #include "drivers/ps2/ps2Driver.h"
 #include "drivers/serial/serial.h"
@@ -21,6 +22,7 @@
 #include "test/test_functions.h"
 #include "types/process.h"
 #include "types/string.h"
+#include "types/timing.h"
 #include "utils/byte_order.h"
 #include "utils/parseMultiboot.h"
 #include "utils/printk.h"
@@ -94,13 +96,17 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	// initPs2();
 	// keyboard_config();
 
+	initialize_rtc_periodic_interrupts();
+	enable_periodic_rtc_interrupts();
+	
 	//initialize interrupts
 	idt_init();
-	IRQ_clear_mask(KEYBOARD_IRQ);
-	IRQ_clear_mask(SERIAL_COM1_IRQ);
-	IRQ_clear_mask(SLAVE_PIC_IRQ);
-	IRQ_clear_mask(PRIMARY_ATA_CHANNEL_IRQ);
-	// IRQ_clear_mask(SECONDARY_ATA_CHANNEL_IRQ);
+
+        PIC_enable_irq(KEYBOARD_IRQ);
+        PIC_enable_irq(SERIAL_COM1_IRQ);
+        PIC_enable_irq(SLAVE_PIC_IRQ);
+        PIC_enable_irq(PRIMARY_ATA_CHANNEL_IRQ);
+        PIC_enable_irq(CMOS_RTC_IRQ);
 
 	init_kbd_state();
 
@@ -164,15 +170,19 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	}
 
 	init_tcp_state();
+
+	PIC_print_all_irq_status();
 	
-	while (!enabled) ;
+	while (0 && !enabled) ;
 	//send_test_udp();
         //send_ping();
 	//test_tcp_syn();
-	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 0, 2090);
-	
+	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.205"), 0, 2090);
+
 	while (1) {
+		printk_info("num clock cycles since processor wakeup %qu\n", get_num_clock_cycles());
 		PROC_run();
+
 		asm("hlt");
 	}
 
