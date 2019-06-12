@@ -313,8 +313,8 @@ net_device *init_rt8139(PCIDevice *pdev) {
 	/* global_rtl_priv = */ priv = (rt8139_private*)dev->netdev_priv;
 	priv->pdev = pdev;
 	
-	//disable interrupts
-	asm("CLI");
+	/* //disable interrupts */
+	/* asm("CLI"); */
 	
 	printk_info("---- Performing initialization of the discovered rtl8139 ----\n");
 	
@@ -440,8 +440,8 @@ net_device *init_rt8139(PCIDevice *pdev) {
 	printk_info("-------------------------------------------------------------\n");
 	print_rtl8139_info(priv);
 
-	//enable interrupts
-	asm("STI");
+	/* //enable interrupts */
+	/* asm("STI"); */
 	
         return dev;
 }
@@ -533,8 +533,8 @@ int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
 	rt8139_private *priv = global_rtl_priv; //todo stop using globals
 	uint8_t tx_buf_to_use;
 
-	//disable interrupts
-	asm("CLI");
+	/* //disable interrupts */
+	/* asm("CLI"); */
 	
 	if(priv == NULL){
 		printk_err("rtl8139 seemingly not initialized, cannot transmit\n");
@@ -577,7 +577,7 @@ int rtl8139_transmit_packet(uint8_t *data, uint64_t data_size){
 	//printk_debug("Queued Tx packet size %u to slot %d\n", data_size, tx_buf_to_use);
 	
 	//enable interrupts
-	asm("STI");
+	//asm("STI");
 	
 
 	return 0;

@@ -9,6 +9,7 @@
 #include "types/process.h"
 #include "utils/printk.h"
 #include "utils/utils.h"
+#include "drivers/cmos/cmos.h"
 
 extern void keyboard_handler(void);
 extern void load_idt(unsigned long);
@@ -291,6 +292,7 @@ extern void irq255_handler(void);
 static void yield_internal();
 static void kexit_internal();
 static void run_internal();
+
 char ist_stack0[4096];
 char ist_stack1[4096];
 char ist_stack2[4096];
@@ -638,8 +640,16 @@ void serial_isr(int irq, int err){
 }
 
 void general_protection_fault_handler(int irq, int err){
-    printk_err("general protection fault\n");
-    asm("hlt");
+	selector_error_code *code = (selector_error_code*)&err;
+	printk_err("general protection fault (err = %u)\n", err);
+	printk_err("selector index = %u\n", code->index);
+	printk_err("table descriptor = %u\n", code->tbl);
+	printk_err("external to processor: %u\n", code->external);
+
+	int enabled = 0;
+	while(!enabled) ;
+	
+	//asm("hlt");
 }
 
 void page_fault_handler(int irq, int err){
@@ -714,13 +724,13 @@ void IRQ_set_handler(int irq, void *handler){
 //initialize all things required for having separate stacks for certain faults
 static void ist_init(){
     //initialize the TSS
-    tss.IST1 = (uint64_t)ist_stack0 + 4096;
-    tss.IST2 = (uint64_t)ist_stack1 + 4096;
-    tss.IST3 = (uint64_t)ist_stack2 + 4096;
-    tss.IST4 = (uint64_t)ist_stack3 + 4096;
-    tss.IST5 = (uint64_t)ist_stack4 + 4096;
-    tss.IST6 = (uint64_t)ist_stack5 + 4096;
-    tss.IST7 = (uint64_t)ist_stack6 + 4096;
+    tss.IST1 = (uint64_t)ist_stack0_top;
+    tss.IST2 = (uint64_t)ist_stack1_top;
+    tss.IST3 = (uint64_t)ist_stack2_top;
+    tss.IST4 = (uint64_t)ist_stack3_top;
+    tss.IST5 = (uint64_t)ist_stack4_top;
+    tss.IST6 = (uint64_t)ist_stack5_top;
+    tss.IST7 = (uint64_t)ist_stack6_top;
 
     int i;
     for(i=0; i<7; i++)
@@ -792,7 +802,12 @@ void idt_init(void){
 
         entry->ist = istNum;
 	entry->res = 0;
-	entry->type = 0xF;
+	if(i < (0x28 + 8)){
+		entry->type = 0xE; //0xF;
+	}
+	else {
+		entry->type = 0xF;
+	}
 	entry->must_be_0 = 0;
 	entry->priv_lvl = 0;
 	entry->present = 1;
@@ -820,12 +835,14 @@ void idt_init(void){
 
     //todo, move the isrs out of this file
     //and then move these function calls somewhere else
-    IRQ_set_handler(33, keyboard_isr);
-    IRQ_set_handler(36, serial_isr);
-    IRQ_set_handler(8, double_fault_handler);
-    IRQ_set_handler(46, ata_primary_isr);
     IRQ_set_handler(GENERAL_PROTECTION_FAULT_EX, general_protection_fault_handler);
     IRQ_set_handler(PAGE_FAULT_EX, page_fault_handler);
+    IRQ_set_handler(DOUBLE_FAULT_EX, double_fault_handler);
+    
+    IRQ_set_handler(33, keyboard_isr);
+    IRQ_set_handler(36, serial_isr);
+    IRQ_set_handler(40, rtc_timer_isr);
+    IRQ_set_handler(46, ata_primary_isr);
     IRQ_set_handler(SYSCALL_VECTOR, syscall_handler);
     IRQ_set_handler(0x81, kexit_internal);
     ist_init();

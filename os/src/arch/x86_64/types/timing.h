@@ -3,6 +3,27 @@
 
 #include <stdint-gcc.h>
 
+typedef struct time time;
+struct time {
+	uint8_t seconds;
+	uint8_t minutes;
+	uint8_t hours;
+};
+
+typedef struct date date;
+struct date {
+	uint8_t day;
+	uint8_t weekday; //1 for Sunday, 7 for Saturday
+	uint8_t month;
+	uint8_t year;
+};
+
+typedef struct datetime datetime;
+struct datetime {
+	time t;
+	date d;
+};
+
 /* RDTSC Instruction:
    Read Time-Stamp Counter
 
@@ -23,4 +44,6 @@ uint64_t get_num_clock_cycles();
 
 void initialize_rtc_periodic_interrupts();
 void enable_periodic_rtc_interrupts();
+
+void print_current_time_and_date_from_rtc();
 #endif

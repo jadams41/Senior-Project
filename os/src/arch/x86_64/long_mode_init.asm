@@ -314,9 +314,11 @@ load_page_table:
 	ret
 
 perform_syscall:
+    cli	
     push rdx
     mov rdx, rdi
     int 0x80
+    sti
     pop rdx
     ret
 
@@ -483,12 +485,14 @@ generic_irq_handler:
     push rsi
     mov rsi, -1
 irq_gen_err_handler:
+    ;; check if interrupts enabled
+	
     push rax
     push rcx
     push rdx
     push rbx
-    ; push rsp
-    ; push rbp
+    ;; push rsp 	;; todo comment again if breaks
+    ;; push rbp	;; todo comment again if breaks
     push rsi
     push rdi
     push r8
@@ -499,12 +503,17 @@ irq_gen_err_handler:
     push r13
     push r14
     push r15
+    ;; push fs
+    ;; push gs
     mov [saved_rbp], rbp
     mov [saved_rsp], rsp
-    call generic_c_isr
+	call generic_c_isr
+	cli
     jmp context_switch
 
 post_switch:
+    ;; pop gs
+    ;; pop fs
     pop r15     ; 1
     pop r14     ; 2
     pop r13     ; 3
@@ -515,8 +524,8 @@ post_switch:
     pop r8      ; 8
     pop rdi     ; 9
     pop rsi     ; 10
-    ; pop rbp     ; 11
-    ; pop rsp     ; 12
+    ;; pop rbp     ; 11
+    ;; pop rsp     ; 12
     pop rbx     ; 13
     pop rdx     ; 14
     pop rcx     ; 15
@@ -625,7 +634,8 @@ irq12_handler:
     jmp generic_irq_handler
 
 irq13_handler:
-    cli
+	;; cli
+	;; hlt
     mov [isr_err_code], rsp ; save the current rsp before it gets changed from pushes
     push rdi
     mov rdi, 13
@@ -633,7 +643,7 @@ irq13_handler:
     mov rsi, [isr_err_code] ; move the original rsp into rsi
     mov rsi, [rsi] ; move whats at the original rsp (err code) into rsi
     jmp irq_gen_err_handler
-
+	
 irq14_handler:
     cli
     pop qword [isr_err_code] ; remove error code from the stack so that iretq doesn't vomit
@@ -840,1047 +850,1255 @@ irq46_handler:
     jmp generic_irq_handler
 
 irq47_handler:
+    cli
     push rdi
     mov rdi, 47
     jmp generic_irq_handler
 
 irq48_handler:
+    cli
     push rdi
     mov rdi, 48
     jmp generic_irq_handler
 
 irq49_handler:
+    cli
     push rdi
     mov rdi, 49
     jmp generic_irq_handler
 
 irq50_handler:
+    cli
     push rdi
     mov rdi, 50
     jmp generic_irq_handler
 
 irq51_handler:
+    cli
     push rdi
     mov rdi, 51
     jmp generic_irq_handler
 
 irq52_handler:
+    cli
     push rdi
     mov rdi, 52
     jmp generic_irq_handler
 
 irq53_handler:
+    cli
     push rdi
     mov rdi, 53
     jmp generic_irq_handler
 
 irq54_handler:
+    cli
     push rdi
     mov rdi, 54
     jmp generic_irq_handler
 
 irq55_handler:
+    cli
     push rdi
     mov rdi, 55
     jmp generic_irq_handler
 
 irq56_handler:
+    cli
     push rdi
     mov rdi, 56
     jmp generic_irq_handler
 
 irq57_handler:
+    cli
     push rdi
     mov rdi, 57
     jmp generic_irq_handler
 
 irq58_handler:
+    cli
     push rdi
     mov rdi, 58
     jmp generic_irq_handler
 
 irq59_handler:
+    cli
     push rdi
     mov rdi, 59
     jmp generic_irq_handler
 
 irq60_handler:
+    cli
     push rdi
     mov rdi, 60
     jmp generic_irq_handler
 
 irq61_handler:
+    cli
     push rdi
     mov rdi, 61
     jmp generic_irq_handler
 
 irq62_handler:
+    cli
     push rdi
     mov rdi, 62
     jmp generic_irq_handler
 
 irq63_handler:
+    cli
     push rdi
     mov rdi, 63
     jmp generic_irq_handler
 
 irq64_handler:
+    cli
     push rdi
     mov rdi, 64
     jmp generic_irq_handler
 
 irq65_handler:
+    cli
     push rdi
     mov rdi, 65
     jmp generic_irq_handler
 
 irq66_handler:
+    cli
     push rdi
     mov rdi, 66
     jmp generic_irq_handler
 
 irq67_handler:
+    cli
     push rdi
     mov rdi, 67
     jmp generic_irq_handler
 
 irq68_handler:
+    cli
     push rdi
     mov rdi, 68
     jmp generic_irq_handler
 
 irq69_handler:
+    cli
     push rdi
     mov rdi, 69
     jmp generic_irq_handler
 
 irq70_handler:
+    cli
     push rdi
     mov rdi, 70
     jmp generic_irq_handler
 
 irq71_handler:
+    cli
     push rdi
     mov rdi, 71
     jmp generic_irq_handler
 
 irq72_handler:
+    cli
     push rdi
     mov rdi, 72
     jmp generic_irq_handler
 
 irq73_handler:
+    cli
     push rdi
     mov rdi, 73
     jmp generic_irq_handler
 
 irq74_handler:
+    cli
     push rdi
     mov rdi, 74
     jmp generic_irq_handler
 
 irq75_handler:
+    cli
     push rdi
     mov rdi, 75
     jmp generic_irq_handler
 
 irq76_handler:
+    cli
     push rdi
     mov rdi, 76
     jmp generic_irq_handler
 
 irq77_handler:
+    cli
     push rdi
     mov rdi, 77
     jmp generic_irq_handler
 
 irq78_handler:
+    cli
     push rdi
     mov rdi, 78
     jmp generic_irq_handler
 
 irq79_handler:
+    cli
     push rdi
     mov rdi, 79
     jmp generic_irq_handler
 
 irq80_handler:
+    cli
     push rdi
     mov rdi, 80
     jmp generic_irq_handler
 
 irq81_handler:
+    cli
     push rdi
     mov rdi, 81
     jmp generic_irq_handler
 
 irq82_handler:
+    cli
     push rdi
     mov rdi, 82
     jmp generic_irq_handler
 
 irq83_handler:
+    cli
     push rdi
     mov rdi, 83
     jmp generic_irq_handler
 
 irq84_handler:
+    cli
     push rdi
     mov rdi, 84
     jmp generic_irq_handler
 
 irq85_handler:
+    cli
     push rdi
     mov rdi, 85
     jmp generic_irq_handler
 
 irq86_handler:
+    cli
     push rdi
     mov rdi, 86
     jmp generic_irq_handler
 
 irq87_handler:
+    cli
     push rdi
     mov rdi, 87
     jmp generic_irq_handler
 
 irq88_handler:
+    cli
     push rdi
     mov rdi, 88
     jmp generic_irq_handler
 
 irq89_handler:
+    cli
     push rdi
     mov rdi, 89
     jmp generic_irq_handler
 
 irq90_handler:
+    cli
     push rdi
     mov rdi, 90
     jmp generic_irq_handler
 
 irq91_handler:
+    cli
     push rdi
     mov rdi, 91
     jmp generic_irq_handler
 
 irq92_handler:
+    cli
     push rdi
     mov rdi, 92
     jmp generic_irq_handler
 
 irq93_handler:
+    cli
     push rdi
     mov rdi, 93
     jmp generic_irq_handler
 
 irq94_handler:
+    cli
     push rdi
     mov rdi, 94
     jmp generic_irq_handler
 
 irq95_handler:
+    cli
     push rdi
     mov rdi, 95
     jmp generic_irq_handler
 
 irq96_handler:
+    cli
     push rdi
     mov rdi, 96
     jmp generic_irq_handler
 
 irq97_handler:
+    cli
     push rdi
     mov rdi, 97
     jmp generic_irq_handler
 
 irq98_handler:
+    cli
     push rdi
     mov rdi, 98
     jmp generic_irq_handler
 
 irq99_handler:
+    cli
     push rdi
     mov rdi, 99
     jmp generic_irq_handler
 
 irq100_handler:
+    cli
     push rdi
     mov rdi, 100
     jmp generic_irq_handler
 
 irq101_handler:
+    cli
     push rdi
     mov rdi, 101
     jmp generic_irq_handler
 
 irq102_handler:
+    cli
     push rdi
     mov rdi, 102
     jmp generic_irq_handler
 
 irq103_handler:
+    cli
     push rdi
     mov rdi, 103
     jmp generic_irq_handler
 
 irq104_handler:
+    cli
     push rdi
     mov rdi, 104
     jmp generic_irq_handler
 
 irq105_handler:
+    cli
     push rdi
     mov rdi, 105
     jmp generic_irq_handler
 
 irq106_handler:
+    cli
     push rdi
     mov rdi, 106
     jmp generic_irq_handler
 
 irq107_handler:
+    cli
     push rdi
     mov rdi, 107
     jmp generic_irq_handler
 
 irq108_handler:
+    cli
     push rdi
     mov rdi, 108
     jmp generic_irq_handler
 
 irq109_handler:
+    cli
     push rdi
     mov rdi, 109
     jmp generic_irq_handler
 
 irq110_handler:
+    cli
     push rdi
     mov rdi, 110
     jmp generic_irq_handler
 
 irq111_handler:
+    cli
     push rdi
     mov rdi, 111
     jmp generic_irq_handler
 
 irq112_handler:
+    cli
     push rdi
     mov rdi, 112
     jmp generic_irq_handler
 
 irq113_handler:
+    cli
     push rdi
     mov rdi, 113
     jmp generic_irq_handler
 
 irq114_handler:
+    cli
     push rdi
     mov rdi, 114
     jmp generic_irq_handler
 
 irq115_handler:
+    cli
     push rdi
     mov rdi, 115
     jmp generic_irq_handler
 
 irq116_handler:
+    cli
     push rdi
     mov rdi, 116
     jmp generic_irq_handler
 
 irq117_handler:
+    cli
     push rdi
     mov rdi, 117
     jmp generic_irq_handler
 
 irq118_handler:
+    cli
     push rdi
     mov rdi, 118
     jmp generic_irq_handler
 
 irq119_handler:
+    cli
     push rdi
     mov rdi, 119
     jmp generic_irq_handler
 
 irq120_handler:
+    cli
     push rdi
     mov rdi, 120
     jmp generic_irq_handler
 
 irq121_handler:
+    cli
     push rdi
     mov rdi, 121
     jmp generic_irq_handler
 
 irq122_handler:
+    cli
     push rdi
     mov rdi, 122
     jmp generic_irq_handler
 
 irq123_handler:
+    cli
     push rdi
     mov rdi, 123
     jmp generic_irq_handler
 
 irq124_handler:
+    cli
     push rdi
     mov rdi, 124
     jmp generic_irq_handler
 
 irq125_handler:
+    cli
     push rdi
     mov rdi, 125
     jmp generic_irq_handler
 
 irq126_handler:
+    cli
     push rdi
     mov rdi, 126
     jmp generic_irq_handler
 
 irq127_handler:
+    cli
     push rdi
     mov rdi, 127
     jmp generic_irq_handler
 
 irq128_handler:
-    sti
+    ;; sti
     push rdi
     mov rdi, 128
     jmp generic_irq_handler
 
 irq129_handler:
+    cli
     push rdi
     mov rdi, 129
     jmp generic_irq_handler
 
 irq130_handler:
+    cli
     push rdi
     mov rdi, 130
     jmp generic_irq_handler
 
 irq131_handler:
+    cli
     push rdi
     mov rdi, 131
     jmp generic_irq_handler
 
 irq132_handler:
+    cli
     push rdi
     mov rdi, 132
     jmp generic_irq_handler
 
 irq133_handler:
+    cli
     push rdi
     mov rdi, 133
     jmp generic_irq_handler
 
 irq134_handler:
+    cli
     push rdi
     mov rdi, 134
     jmp generic_irq_handler
 
 irq135_handler:
+    cli
     push rdi
     mov rdi, 135
     jmp generic_irq_handler
 
 irq136_handler:
+    cli
     push rdi
     mov rdi, 136
     jmp generic_irq_handler
 
 irq137_handler:
+    cli
     push rdi
     mov rdi, 137
     jmp generic_irq_handler
 
 irq138_handler:
+    cli
     push rdi
     mov rdi, 138
     jmp generic_irq_handler
 
 irq139_handler:
+    cli
     push rdi
     mov rdi, 139
     jmp generic_irq_handler
 
 irq140_handler:
+    cli
     push rdi
     mov rdi, 140
     jmp generic_irq_handler
 
 irq141_handler:
+    cli
     push rdi
     mov rdi, 141
     jmp generic_irq_handler
 
 irq142_handler:
+    cli
     push rdi
     mov rdi, 142
     jmp generic_irq_handler
 
 irq143_handler:
+    cli
     push rdi
     mov rdi, 143
     jmp generic_irq_handler
 
 irq144_handler:
+    cli
     push rdi
     mov rdi, 144
     jmp generic_irq_handler
 
 irq145_handler:
+    cli
     push rdi
     mov rdi, 145
     jmp generic_irq_handler
 
 irq146_handler:
+    cli
     push rdi
     mov rdi, 146
     jmp generic_irq_handler
 
 irq147_handler:
+    cli
     push rdi
     mov rdi, 147
     jmp generic_irq_handler
 
 irq148_handler:
+    cli
     push rdi
     mov rdi, 148
     jmp generic_irq_handler
 
 irq149_handler:
+    cli
     push rdi
     mov rdi, 149
     jmp generic_irq_handler
 
 irq150_handler:
+    cli
     push rdi
     mov rdi, 150
     jmp generic_irq_handler
 
 irq151_handler:
+    cli
     push rdi
     mov rdi, 151
     jmp generic_irq_handler
 
 irq152_handler:
+    cli
     push rdi
     mov rdi, 152
     jmp generic_irq_handler
 
 irq153_handler:
+    cli
     push rdi
     mov rdi, 153
     jmp generic_irq_handler
 
 irq154_handler:
+    cli
     push rdi
     mov rdi, 154
     jmp generic_irq_handler
 
 irq155_handler:
+    cli
     push rdi
     mov rdi, 155
     jmp generic_irq_handler
 
 irq156_handler:
+    cli
     push rdi
     mov rdi, 156
     jmp generic_irq_handler
 
 irq157_handler:
+    cli
     push rdi
     mov rdi, 157
     jmp generic_irq_handler
 
 irq158_handler:
+    cli
     push rdi
     mov rdi, 158
     jmp generic_irq_handler
 
 irq159_handler:
+    cli
     push rdi
     mov rdi, 159
     jmp generic_irq_handler
 
 irq160_handler:
+    cli
     push rdi
     mov rdi, 160
     jmp generic_irq_handler
 
 irq161_handler:
+    cli
     push rdi
     mov rdi, 161
     jmp generic_irq_handler
 
 irq162_handler:
+    cli
     push rdi
     mov rdi, 162
     jmp generic_irq_handler
 
 irq163_handler:
+    cli
     push rdi
     mov rdi, 163
     jmp generic_irq_handler
 
 irq164_handler:
+    cli
     push rdi
     mov rdi, 164
     jmp generic_irq_handler
 
 irq165_handler:
+    cli
     push rdi
     mov rdi, 165
     jmp generic_irq_handler
 
 irq166_handler:
+    cli
     push rdi
     mov rdi, 166
     jmp generic_irq_handler
 
 irq167_handler:
+    cli
     push rdi
     mov rdi, 167
     jmp generic_irq_handler
 
 irq168_handler:
+    cli
     push rdi
     mov rdi, 168
     jmp generic_irq_handler
 
 irq169_handler:
+    cli
     push rdi
     mov rdi, 169
     jmp generic_irq_handler
 
 irq170_handler:
+    cli
     push rdi
     mov rdi, 170
     jmp generic_irq_handler
 
 irq171_handler:
+    cli
     push rdi
     mov rdi, 171
     jmp generic_irq_handler
 
 irq172_handler:
+    cli
     push rdi
     mov rdi, 172
     jmp generic_irq_handler
 
 irq173_handler:
+    cli
     push rdi
     mov rdi, 173
     jmp generic_irq_handler
 
 irq174_handler:
+    cli
     push rdi
     mov rdi, 174
     jmp generic_irq_handler
 
 irq175_handler:
+    cli
     push rdi
     mov rdi, 175
     jmp generic_irq_handler
 
 irq176_handler:
+    cli
     push rdi
     mov rdi, 176
     jmp generic_irq_handler
 
 irq177_handler:
+    cli
     push rdi
     mov rdi, 177
     jmp generic_irq_handler
 
 irq178_handler:
+    cli
     push rdi
     mov rdi, 178
     jmp generic_irq_handler
 
 irq179_handler:
+    cli
     push rdi
     mov rdi, 179
     jmp generic_irq_handler
 
 irq180_handler:
+    cli
     push rdi
     mov rdi, 180
     jmp generic_irq_handler
 
 irq181_handler:
+    cli
     push rdi
     mov rdi, 181
     jmp generic_irq_handler
 
 irq182_handler:
+    cli
     push rdi
     mov rdi, 182
     jmp generic_irq_handler
 
 irq183_handler:
+    cli
     push rdi
     mov rdi, 183
     jmp generic_irq_handler
 
 irq184_handler:
+    cli
     push rdi
     mov rdi, 184
     jmp generic_irq_handler
 
 irq185_handler:
+    cli
     push rdi
     mov rdi, 185
     jmp generic_irq_handler
 
 irq186_handler:
+    cli
     push rdi
     mov rdi, 186
     jmp generic_irq_handler
 
 irq187_handler:
+    cli
     push rdi
     mov rdi, 187
     jmp generic_irq_handler
 
 irq188_handler:
+    cli
     push rdi
     mov rdi, 188
     jmp generic_irq_handler
 
 irq189_handler:
+    cli
     push rdi
     mov rdi, 189
     jmp generic_irq_handler
 
 irq190_handler:
+    cli
     push rdi
     mov rdi, 190
     jmp generic_irq_handler
 
 irq191_handler:
+    cli
     push rdi
     mov rdi, 191
     jmp generic_irq_handler
 
 irq192_handler:
+    cli
     push rdi
     mov rdi, 192
     jmp generic_irq_handler
 
 irq193_handler:
+    cli
     push rdi
     mov rdi, 193
     jmp generic_irq_handler
 
 irq194_handler:
+    cli
     push rdi
     mov rdi, 194
     jmp generic_irq_handler
 
 irq195_handler:
+    cli
     push rdi
     mov rdi, 195
     jmp generic_irq_handler
 
 irq196_handler:
+    cli
     push rdi
     mov rdi, 196
     jmp generic_irq_handler
 
 irq197_handler:
+    cli
     push rdi
     mov rdi, 197
     jmp generic_irq_handler
 
 irq198_handler:
+    cli
     push rdi
     mov rdi, 198
     jmp generic_irq_handler
 
 irq199_handler:
+    cli
     push rdi
     mov rdi, 199
     jmp generic_irq_handler
 
 irq200_handler:
+    cli
     push rdi
     mov rdi, 200
     jmp generic_irq_handler
 
 irq201_handler:
+    cli
     push rdi
     mov rdi, 201
     jmp generic_irq_handler
 
 irq202_handler:
+    cli
     push rdi
     mov rdi, 202
     jmp generic_irq_handler
 
 irq203_handler:
+    cli
     push rdi
     mov rdi, 203
     jmp generic_irq_handler
 
 irq204_handler:
+    cli
     push rdi
     mov rdi, 204
     jmp generic_irq_handler
 
 irq205_handler:
+    cli
     push rdi
     mov rdi, 205
     jmp generic_irq_handler
 
 irq206_handler:
+    cli
     push rdi
     mov rdi, 206
     jmp generic_irq_handler
 
 irq207_handler:
+    cli
     push rdi
     mov rdi, 207
     jmp generic_irq_handler
 
 irq208_handler:
+    cli
     push rdi
     mov rdi, 208
     jmp generic_irq_handler
 
 irq209_handler:
+    cli
     push rdi
     mov rdi, 209
     jmp generic_irq_handler
 
 irq210_handler:
+    cli
     push rdi
     mov rdi, 210
     jmp generic_irq_handler
 
 irq211_handler:
+    cli
     push rdi
     mov rdi, 211
     jmp generic_irq_handler
 
 irq212_handler:
+    cli
     push rdi
     mov rdi, 212
     jmp generic_irq_handler
 
 irq213_handler:
+    cli
     push rdi
     mov rdi, 213
     jmp generic_irq_handler
 
 irq214_handler:
+    cli
     push rdi
     mov rdi, 214
     jmp generic_irq_handler
 
 irq215_handler:
+    cli
     push rdi
     mov rdi, 215
     jmp generic_irq_handler
 
 irq216_handler:
+    cli
     push rdi
     mov rdi, 216
     jmp generic_irq_handler
 
 irq217_handler:
+    cli
     push rdi
     mov rdi, 217
     jmp generic_irq_handler
 
 irq218_handler:
+    cli
     push rdi
     mov rdi, 218
     jmp generic_irq_handler
 
 irq219_handler:
+    cli
     push rdi
     mov rdi, 219
     jmp generic_irq_handler
 
 irq220_handler:
+    cli
     push rdi
     mov rdi, 220
     jmp generic_irq_handler
 
 irq221_handler:
+    cli
     push rdi
     mov rdi, 221
     jmp generic_irq_handler
 
 irq222_handler:
+    cli
     push rdi
     mov rdi, 222
     jmp generic_irq_handler
 
 irq223_handler:
+    cli
     push rdi
     mov rdi, 223
     jmp generic_irq_handler
 
 irq224_handler:
+    cli
     push rdi
     mov rdi, 224
     jmp generic_irq_handler
 
 irq225_handler:
+    cli
     push rdi
     mov rdi, 225
     jmp generic_irq_handler
 
 irq226_handler:
+    cli
     push rdi
     mov rdi, 226
     jmp generic_irq_handler
 
 irq227_handler:
+    cli
     push rdi
     mov rdi, 227
     jmp generic_irq_handler
 
 irq228_handler:
+    cli
     push rdi
     mov rdi, 228
     jmp generic_irq_handler
 
 irq229_handler:
+    cli
     push rdi
     mov rdi, 229
     jmp generic_irq_handler
 
 irq230_handler:
+    cli
     push rdi
     mov rdi, 230
     jmp generic_irq_handler
 
 irq231_handler:
+    cli
     push rdi
     mov rdi, 231
     jmp generic_irq_handler
 
 irq232_handler:
+    cli
     push rdi
     mov rdi, 232
     jmp generic_irq_handler
 
 irq233_handler:
+    cli
     push rdi
     mov rdi, 233
     jmp generic_irq_handler
 
 irq234_handler:
+    cli
     push rdi
     mov rdi, 234
     jmp generic_irq_handler
 
 irq235_handler:
+    cli
     push rdi
     mov rdi, 235
     jmp generic_irq_handler
 
 irq236_handler:
+    cli
     push rdi
     mov rdi, 236
     jmp generic_irq_handler
 
 irq237_handler:
+    cli
     push rdi
     mov rdi, 237
     jmp generic_irq_handler
 
 irq238_handler:
+    cli
     push rdi
     mov rdi, 238
     jmp generic_irq_handler
 
 irq239_handler:
+    cli
     push rdi
     mov rdi, 239
     jmp generic_irq_handler
 
 irq240_handler:
+    cli
     push rdi
     mov rdi, 240
     jmp generic_irq_handler
 
 irq241_handler:
+    cli
     push rdi
     mov rdi, 241
     jmp generic_irq_handler
 
 irq242_handler:
+    cli
     push rdi
     mov rdi, 242
     jmp generic_irq_handler
 
 irq243_handler:
+    cli
     push rdi
     mov rdi, 243
     jmp generic_irq_handler
 
 irq244_handler:
+    cli
     push rdi
     mov rdi, 244
     jmp generic_irq_handler
 
 irq245_handler:
+    cli
     push rdi
     mov rdi, 245
     jmp generic_irq_handler
 
 irq246_handler:
+    cli
     push rdi
     mov rdi, 246
     jmp generic_irq_handler
 
 irq247_handler:
+    cli
     push rdi
     mov rdi, 247
     jmp generic_irq_handler
 
 irq248_handler:
+    cli
     push rdi
     mov rdi, 248
     jmp generic_irq_handler
 
 irq249_handler:
+    cli
     push rdi
     mov rdi, 249
     jmp generic_irq_handler
 
 irq250_handler:
+    cli
     push rdi
     mov rdi, 250
     jmp generic_irq_handler
 
 irq251_handler:
+    cli
     push rdi
     mov rdi, 251
     jmp generic_irq_handler
 
 irq252_handler:
+    cli
     push rdi
     mov rdi, 252
     jmp generic_irq_handler
 
 irq253_handler:
+    cli
     push rdi
     mov rdi, 253
     jmp generic_irq_handler
 
 irq254_handler:
+    cli
     push rdi
     mov rdi, 254
     jmp generic_irq_handler
 
 irq255_handler:
+    cli
     push rdi
     mov rdi, 255
     jmp generic_irq_handler
@@ -1905,8 +2123,8 @@ saved_cr2 DQ 0x0
 saved_cr3 DQ 0x0
 saved_rsp DQ 0x0
 saved_rbp DQ 0x0
-isr_err_code DQ 0x0
-
+isr_err_code DQ 0x0	
+	
 section .bss
 align 4096
 new_GDT resb 4096

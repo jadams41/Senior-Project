@@ -104,9 +104,12 @@ runf: $(fat)
 	#sudo /etc/qemu-ifup tap5
 	@sudo $(vm_prog) \
 	-machine ubuntu \
+	-display none \
+	-d guest_errors \
 	-s -drive format=raw,file=$(fat) \
 	-serial stdio \
-	-netdev tap,id=mynet0,ifname=tap6,script=no,downscript=no \
+	-rtc base=localtime,clock=host \
+	-netdev tap,id=mynet0,ifname=tap5,script=no,downscript=no \
 	-net nic,model=rtl8139,netdev=mynet0 \
 	-no-kvm-irqchip
 	#sudo /etc/qemu-ifdown tap5

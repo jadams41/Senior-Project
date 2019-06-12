@@ -21,26 +21,26 @@
 #define NUM_INTERRUPT_STACKS 7
 
 //exception irq vectors
-#define DIVIDE_BY_ZERO_EX 0
-#define DEBUG_EX 1
-#define NON_MASKABLE_INT 2
-#define BREAKPOINT_EX 3
-#define OVERFLOW_EX 4
-#define BOUNDED_RANGE_EX 5
-#define INVALID_OPCODE_EX 6
-#define DEVICE_NOT_AVAIL_EX 7
-#define DOUBLE_FAULT_EX 8
-#define INVALID_TSS_EX 10
-#define SEG_NOT_PRES_EX 11
-#define STACK_SEG_FAULT_EX 12
+#define DIVIDE_BY_ZERO_EX           0
+#define DEBUG_EX                    1
+#define NON_MASKABLE_INT            2
+#define BREAKPOINT_EX               3
+#define OVERFLOW_EX                 4
+#define BOUNDED_RANGE_EX            5
+#define INVALID_OPCODE_EX           6
+#define DEVICE_NOT_AVAIL_EX         7
+#define DOUBLE_FAULT_EX             8
+#define INVALID_TSS_EX              10
+#define SEG_NOT_PRES_EX             11
+#define STACK_SEG_FAULT_EX          12
 #define GENERAL_PROTECTION_FAULT_EX 13
-#define PAGE_FAULT_EX 14
-#define FLOATING_POINT_EX 16
-#define ALIGNMENT_CHECK_EX 17
-#define MACHINE_CHECK_EX 18
-#define SIMD_FLOATING_POINT_EX 19
-#define VIRTUALIZATION_EX 20
-#define SECURITY_EX 30
+#define PAGE_FAULT_EX               14
+#define FLOATING_POINT_EX           16
+#define ALIGNMENT_CHECK_EX          17
+#define MACHINE_CHECK_EX            18
+#define SIMD_FLOATING_POINT_EX      19
+#define VIRTUALIZATION_EX           20
+#define SECURITY_EX                 30
 
 /* other interrupt vectors */
 #define SYSCALL_VECTOR 0x80
@@ -136,6 +136,13 @@ typedef struct {
     uint64_t base;
 }__attribute__((packed)) gdt_tag;
 
+/* structure of err when gpf is raised */
+typedef struct {
+	uint16_t reserved:16;
+	uint16_t index:13;   //index of the descriptor for where the fault occurred
+	uint8_t  tbl:2;      //which table the selector index refers to
+	uint8_t  external:1; //if set, the exception originated externally to the processor
+}__attribute__((packed)) selector_error_code;
 
 void idt_init(void);
 void IRQ_set_handler(int irq, void *handler);

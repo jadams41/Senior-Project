@@ -1,5 +1,6 @@
 #include <stdint-gcc.h>
 #include "drivers/block/blockDeviceDriver.h"
+#include "drivers/cmos/cmos.h"
 #include "drivers/fs/fat32.h"
 #include "drivers/fs/vfs.h"
 #include "drivers/interrupts/idt.h"
@@ -95,9 +96,6 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	//currently working without this, too scared to uncomment
 	// initPs2();
 	// keyboard_config();
-
-	initialize_rtc_periodic_interrupts();
-	enable_periodic_rtc_interrupts();
 	
 	//initialize interrupts
 	idt_init();
@@ -108,6 +106,8 @@ int kmain(void *multiboot_point, unsigned int multitest)
         PIC_enable_irq(PRIMARY_ATA_CHANNEL_IRQ);
         PIC_enable_irq(CMOS_RTC_IRQ);
 
+	CMOS_initialize_rtc_periodic_interrupts(RTC_ClockRate8kHz);
+	
 	init_kbd_state();
 
 	//turn on interrupts
@@ -116,7 +116,7 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	//initialize serial output
 	SER_init();
 	printk_rainbow("----SERIAL DEBUGGING BEGIN----\n");
-
+	
 	printk_info("%s\n",
 		    get_endianness() == LITTLE_ENDIAN ?
 		    "Endianness: Little Endian" : "Endianness: Big Endian");
@@ -172,17 +172,16 @@ int kmain(void *multiboot_point, unsigned int multitest)
 	init_tcp_state();
 
 	PIC_print_all_irq_status();
+	print_current_time_and_date_from_rtc();
 	
 	while (0 && !enabled) ;
 	//send_test_udp();
         //send_ping();
-	//test_tcp_syn();
-	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.205"), 0, 2090);
-
+	//test_tcp_syn();172.16.210.183
+	tcp_connect(str_to_ipv4(STATIC_IP), str_to_ipv4("172.16.210.183"), 0, 2090);
+	
 	while (1) {
-		printk_info("num clock cycles since processor wakeup %qu\n", get_num_clock_cycles());
 		PROC_run();
-
 		asm("hlt");
 	}
 

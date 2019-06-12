@@ -162,11 +162,12 @@ void PIC_end_of_interrupt(int irq){
 		return;
 	}
 	
-	if(PIC_irq_from_pic1(irq) || !PIC_irq_from_pic2(irq)){
+	if(PIC_irq_from_pic1(irq)){
 		outb(PIC1_CMD, PIC_EOI);
 		return;
 	}
 	if(PIC_irq_from_pic2(irq)){
+		outb(PIC1_CMD, PIC_EOI);
 		outb(PIC2_CMD, PIC_EOI);
 		return;
 	}
