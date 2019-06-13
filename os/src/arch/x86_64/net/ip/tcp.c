@@ -1,4 +1,5 @@
 #include <stdint-gcc.h>
+
 #include "drivers/memory/memoryManager.h"
 #include "drivers/net/ethernet/realtek/8139too.h"
 #include "net/ip/checksum.h"
@@ -139,10 +140,6 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 				break;
 			}
 			
-			/* //unblock all waiting connections */
-			/* if(tcp_state.blocked.head) */
-			/* 	PROC_unblock_all(&tcp_state.blocked); */
-			/* /\* asm("STI"); *\/ */
 			return;
 		}
 		
@@ -278,22 +275,6 @@ static void block_until_tcp_received(tcp_connection *conn, int timeout_len){
 	}
 }
 
-/* void test_tcp_syn(){ */
-/* 	ipv4_addr src = str_to_ipv4(STATIC_IP); //static ip of this machine */
-/* 	ipv4_addr dest = str_to_ipv4("172.16.210.183");   //random, ripped from wireshark capture */
-/* 	uint16_t src_port = 57746; //random, ripped from wireshark capture */
-/* 	uint16_t dest_port = 2023; //random, ripped from wireshark capture */
-
-/* 	uint64_t *proc_params = (uint64_t*)kmalloc(sizeof(uint64_t) * 5); */
-/* 	proc_params[0] = 5; */
-/* 	proc_params[1] = src; */
-/* 	proc_params[2] = dest; */
-/* 	proc_params[3] = src_port; */
-/* 	proc_params[4] = dest_port; */
-
-/* 	PROC_create_kthread(establish_tcp_connection, (void*)proc_params); */
-/* } */
-
 void tcp_connect(ipv4_addr src, ipv4_addr dest, uint16_t src_port, uint16_t dest_port){
 	uint64_t *proc_params = (uint64_t*)kmalloc(sizeof(uint64_t) * 5);
 	proc_params[0] = 5;
@@ -374,6 +355,8 @@ static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new
 	
 	/* let tcp connection thread know that we have received a response */
 	conn->new_data_avail = 1;
+	
+	printk("received seq_num=%u (len=%lu)\n", (recvd_seq - conn->first_remote_seq), data_len);
 	
 	if((recvd_seq + data_len) <= conn->highest_remote_seq){
 		printk_warn("already received all of this data, doing nothing\n");

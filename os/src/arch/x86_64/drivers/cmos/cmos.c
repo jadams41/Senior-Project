@@ -129,7 +129,7 @@ void clear_timeouts_for_pid(int pid){
 	}
 
 	if(num_cleared)
-		printk_info("cleared %d pending timeout(s) for process %d\n", num_cleared, pid);
+		/* printk_info("cleared %d pending timeout(s) for process %d\n", num_cleared, pid); */
 
 	PROC_popcli();
 }
