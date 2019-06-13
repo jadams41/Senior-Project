@@ -911,7 +911,8 @@ static void run_internal(){
 
     rootProc.rsp = saved_rsp;
     rootProc.rbp = saved_rbp;
-
+    rootProc.cli_count = 0;
+    
     //set curProc = nextProc
     curProc = nextProc;
     nextProc = &rootProc;

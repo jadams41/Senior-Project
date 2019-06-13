@@ -1,38 +1,24 @@
 #include <stdint-gcc.h>
 
 #include "drivers/cmos/cmos.h"
+#include "types/process.h"
 #include "types/timing.h"
 #include "utils/printk.h"
 #include "utils/utils.h"
+#include "drivers/memory/memoryManager.h"
+
+char *weekdays[8] = {"Bad Weekday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 static rtc_interrupt_state rtc_state = {
 	.bcd_or_binary = 0,
 	.hour_format = 0,
 	.init_time = {
-		.t = {
-			.seconds = 0,
-			.minutes = 0,
-			.hours = 0
-		},
-		.d = {
-			.day = 0,
-			.weekday = 0,
-			.month = 0,
-			.year = 0
-		},
+		.t = { .seconds = 0, .minutes = 0, .hours = 0 },
+		.d = { .day = 0, .weekday = 0, .month = 0, .year = 0 },
 	},
 	.cur_time = {
-		.t = {
-			.seconds = 0,
-			.minutes = 0,
-			.hours = 0
-		},
-		.d = {
-			.day = 0,
-			.weekday = 0,
-			.month = 0,
-			.year = 0
-		},
+		.t = { .seconds = 0, .minutes = 0, .hours = 0 },
+		.d = { .day = 0, .weekday = 0, .month = 0, .year = 0 },
 	},
 	.rate = 0,
 	.interrupts_per_sec = 0,
@@ -40,8 +26,6 @@ static rtc_interrupt_state rtc_state = {
 	.enabled = 0,
 	.read_cur_rtc_retries = 0,
 };
-
-char *weekdays[8] = {"Bad Weekday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 static uint8_t CMOS_read_byte(uint8_t offset){
 	uint8_t read_byte;
@@ -52,11 +36,11 @@ static uint8_t CMOS_read_byte(uint8_t offset){
 	}
 	
 	//indicate that we want to read byte at supplied offset
-	asm("CLI");
+        PROC_pushcli();
 	outb(0x70, 0x80 | offset);
 
 	read_byte = inb(0x71);
-	asm("STI");
+	PROC_popcli();
 
 	return read_byte;
 }
@@ -68,14 +52,14 @@ static void __attribute__((unused)) CMOS_write_byte(uint8_t offset, uint8_t valu
 	}
 
 	//indicate that we want to write byte at supplied offset
-	asm("CLI");
+        PROC_pushcli();
 	outb(0x70, 0x80 | offset);
 
 	/* int i; */
 	/* while(i++ < 1000) ; */
 
 	outb(0x71, value);
-	asm("STI");
+	PROC_popcli();
 }
 
 
@@ -118,16 +102,62 @@ static int lazy_update_time(){
 	return 0;
 }
 
+void clear_timeouts_for_pid(int pid){
+	PROC_pushcli();
+	
+	int num_cleared = 0;
+
+	pending_timeout *cur = rtc_state.timeouts, *last = NULL;
+	while(cur){
+		if(cur->pid == pid){
+			if(!last){
+				rtc_state.timeouts = cur->next;
+			}
+			else {
+				last->next = cur->next;
+			}
+
+			pending_timeout *to_del = cur;
+			cur = cur->next;
+			kfree(to_del);
+			num_cleared += 1;
+		}
+		else {
+			last = cur;
+			cur = cur->next;
+		}		
+	}
+
+	if(num_cleared)
+		printk_info("cleared %d pending timeout(s) for process %d\n", num_cleared, pid);
+
+	PROC_popcli();
+}
+
 void rtc_timer_isr(int irq, int err){
 	rtc_state.ints_received += 1;
 	if(lazy_update_time()){
-		printk("cur time: %02d:%02d:%02d\n", rtc_state.cur_time.t.hours, rtc_state.cur_time.t.minutes, rtc_state.cur_time.t.seconds);
+		//printk("cur time: %02d:%02d:%02d\n", rtc_state.cur_time.t.hours, rtc_state.cur_time.t.minutes, rtc_state.cur_time.t.seconds);
+	}
+
+	/* check if there are any timeouts to unblock */
+	if(rtc_state.timeouts && rtc_state.ints_received >= rtc_state.timeouts->ints_done){
+		printk_info("about to unblock process\n");
+	        pending_timeout *cur = rtc_state.timeouts;
+		while(cur && cur->ints_done <= rtc_state.ints_received){
+			PROC_unblock(cur->blocked_on, cur->pid);
+
+			rtc_state.timeouts = cur = cur->next;
+
+		}
 	}
 	
 	/* acknowledge the interrupt to CMOS by reading status register C */
 	outb(0x70, 0x80 | CMOS_STATUS_REG_C);
 	inb(0x71);
 }
+
+
 
 datetime read_cur_rtc(){
 	datetime cur_datetime;
@@ -177,7 +207,7 @@ datetime read_cur_rtc(){
 	if(times_read > 1){
 		rtc_state.read_cur_rtc_retries += (times_read - 1);
 	}
-	
+
 	if(rtc_state.bcd_or_binary == BCD_MODE){
 		seconds = (seconds & 0x0F) + ((seconds / 16) * 10);
 		minutes = (minutes & 0x0F) + ((minutes / 16) * 10);
@@ -201,6 +231,11 @@ datetime read_cur_rtc(){
 
 //taken from https://wiki.osdev.org/RTC
 void CMOS_initialize_rtc_periodic_interrupts(RTC_periodic_int_rate rate){
+	if(rtc_state.enabled){
+		printk_err("rtc periodic interrupts already enabled, nothing happening\n");
+		return;
+	}
+
 	uint8_t prev_regB, prev_regA;
 
 	/* get rtc format information from cmos */
@@ -209,8 +244,9 @@ void CMOS_initialize_rtc_periodic_interrupts(RTC_periodic_int_rate rate){
 	rtc_state.rate = rate;
 	rtc_state.interrupts_per_sec = (32768 >> (rate - 1)); //convert request rate to hz
 	rtc_state.ints_received = 0;
-	rtc_state.read_cur_rtc_retries = 0;
-	
+	rtc_state.timeouts = NULL;
+       	rtc_state.read_cur_rtc_retries = 0;
+		
         /* Turn on IRQ 8 */
 	prev_regB = CMOS_read_byte(CMOS_STATUS_REG_B);
 	CMOS_write_byte(CMOS_STATUS_REG_B, prev_regB | 0x40);
@@ -226,6 +262,52 @@ void CMOS_initialize_rtc_periodic_interrupts(RTC_periodic_int_rate rate){
 	
 	/* finally, read status register C to enable interrupts */
 	CMOS_read_byte(CMOS_STATUS_REG_C);
+}
+
+void set_timeout_for_process(ProcessQueue *pq, int pid, int timeout_secs){
+	PROC_pushcli();
+	
+	int ints_recvd_timeout_end = rtc_state.ints_received + (timeout_secs * rtc_state.interrupts_per_sec);
+
+	/* create the pending timeout struct for the process */
+	pending_timeout *new_timeout = (pending_timeout*)kmalloc(sizeof(pending_timeout));
+	new_timeout->pid = pid;
+	new_timeout->seconds = timeout_secs;
+	new_timeout->ints_start = rtc_state.ints_received;
+	new_timeout->ints_done = ints_recvd_timeout_end;
+	new_timeout->blocked_on = pq;
+
+	if(!rtc_state.timeouts || ints_recvd_timeout_end < rtc_state.timeouts->ints_done){
+		new_timeout->next = rtc_state.timeouts;
+		rtc_state.timeouts = new_timeout;
+		goto out;
+	}
+
+	/* insert into list of pending timeouts in order of timeout */
+	pending_timeout *cur = rtc_state.timeouts, *last = NULL;
+	while(1){
+		if(!cur){
+			new_timeout->next = NULL;
+			last->next = new_timeout;
+			goto out;
+		}
+		if(ints_recvd_timeout_end < cur->ints_done){
+			if(!last){
+				new_timeout->next = rtc_state.timeouts;
+				rtc_state.timeouts = new_timeout;
+				goto out;
+			}
+			new_timeout->next = cur;
+			last->next = new_timeout;
+		        goto out;
+		}
+		
+		last = cur;
+		cur = cur->next;
+	}
+	
+out:
+	PROC_popcli();
 }
 
 void print_current_time_and_date_from_rtc(){

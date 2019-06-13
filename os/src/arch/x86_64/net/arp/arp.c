@@ -184,7 +184,7 @@ int add_arp_table_entry(uint32_t ip_addr, uint16_t hw_type, hw_addr hw_addr){
 }
 
 void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
-	asm("CLI");
+	/* asm("CLI"); */
         eth_frame_header *frame_head = (eth_frame_header*)frame;
 	arp_packet_base  *arp_packet = (arp_packet_base*)(frame + sizeof(eth_frame_header));
 
@@ -260,5 +260,5 @@ void handle_received_arp_packet(uint8_t *frame, unsigned int frame_len){
 		break;
 	}
 
-	asm("STI");
+	/* asm("STI"); */
 }

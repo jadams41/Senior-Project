@@ -544,13 +544,13 @@ static void printk_var(char **str, const char *fmtStr, va_list args){
  * Note: for every character written, that character will
  * also be printed to the Serial Port #1
  */
-void printk(const char *fmtStr, ...) {
+void __attribute__((format(printf, 1, 2))) printk(const char *fmtStr, ...) {
 	va_list args;
 	va_start(args, fmtStr);
 	printk_var(NULL, fmtStr, args);
 }
 
-void sprintk(char *str, const char *fmtStr, ...) {
+void __attribute__((format(printf, 2, 3))) sprintk(char *str, const char *fmtStr, ...) {
 	char *output_str = str;
 
 	va_list args;
@@ -560,7 +560,7 @@ void sprintk(char *str, const char *fmtStr, ...) {
 	*output_str = '\0';
 }
 
-void printk_err(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_err(const char *fmtStr, ...){
 	va_list args;
 	va_start(args, fmtStr);
 	char color = getColor(), back = getBackgroundColor();
@@ -571,7 +571,7 @@ void printk_err(const char *fmtStr, ...){
 	setBackgroundColor(back);
 }
 
-void printk_warn(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_warn(const char *fmtStr, ...){
 	va_list args;
 	char color;
 	char back;
@@ -592,7 +592,7 @@ void printk_warn(const char *fmtStr, ...){
 	setBackgroundColor(back);
 }
 
-void printk_info(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_info(const char *fmtStr, ...){
 	va_list args;
 	char color;
 	char back;
@@ -614,7 +614,7 @@ void printk_info(const char *fmtStr, ...){
 	setBackgroundColor(back);
 }
 
-void printk_debug(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_debug(const char *fmtStr, ...){
 	va_list args;
 	char color;
 	char back;
@@ -637,7 +637,7 @@ void printk_debug(const char *fmtStr, ...){
 }
 
 /* What's the point of writing an operating system if you can't have a little bit of fun? */
-void printk_rainbow(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_rainbow(const char *fmtStr, ...){
 	va_list args;
 	char color;
 	char back;
@@ -661,7 +661,7 @@ void printk_rainbow(const char *fmtStr, ...){
 	print_rainbow_mode = 0;
 }
 
-void printk_dir(const char *fmtStr, ...){
+void __attribute__((format(printf, 1, 2))) printk_dir(const char *fmtStr, ...){
 	va_list args;
 	va_start(args, fmtStr);
 	char color = getColor(), back = getBackgroundColor();
@@ -738,14 +738,14 @@ void printkTest(){
 	printk("printk hex test: upper - %X, lower - %x\n", 4444, 4444);
 	printk("printk pointer test: %p \n", &testInt);
 	printk("printk long test: %ld \n", l);
-	printk("printk unsigned long test: %lu\n", -1);
-	printk("printk hex long test: %lx\n", -1);
+	printk("printk unsigned long test: %lu\n", (unsigned long)-1);
+	printk("printk hex long test: %lx\n", (unsigned long)-1);
 	printk("printk short test: %hd\n", s);
-	printk("printk ushort test: %hu\n", -1);
-	printk("printk hex short test: %hx\n", -1);
-	printk("printk quad test: %qd \n", l);
-	printk("printk unsigned quad test: %qu\n", -1);
-	printk("printk hex quad test: %qx\n", -1);
+	printk("printk ushort test: %hu\n", (unsigned short)-1);
+	printk("printk hex short test: %hx\n", (unsigned short)-1);
+	/* printk("printk quad test: %qd \n", l); */
+	/* printk("printk unsigned quad test: %qu\n", (uint64_t)-1); */
+	/* printk("printk hex quad test: %qx\n", (uint64_t)-1); */
 	printLineAcrossScreen();
 
 	printk("printk color test: ");

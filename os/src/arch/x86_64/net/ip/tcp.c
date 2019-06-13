@@ -9,6 +9,8 @@
 #include "utils/printk.h"
 #include "utils/random.h"
 
+extern PROC_context *curProc;
+
 static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new_tcp_head, uint64_t tcp_len);
 static void print_flags(tcp_flags f);
 static int flags_equal(tcp_flags f1, tcp_flags f2);
@@ -30,7 +32,7 @@ static uint16_t get_random_dynamic_port(){
 	rand = rand % (LAST_DYNAMIC_PORT - FIRST_DYNAMIC_PORT + 1);
 	rand = rand + FIRST_DYNAMIC_PORT;
 
-	//printk_debug("random port = %u\n", rand);
+	printk_debug("random port = %u\n", rand);
 	
 	return rand;
 }
@@ -70,7 +72,6 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 		asm("hlt");
 	}
 
-	asm("CLI");
 	uint64_t tcp_len = ntohs(ip_head->total_len) - sizeof(ipv4_header);
 	//printk_debug("ip_head->total_len = %u, sizeof(ipv4_header) = %u, tcp_len = %u\n", ntohs(ip_head->total_len), sizeof(ipv4_header), tcp_len);
 	
@@ -101,13 +102,14 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 				if(!(raw_flags & (TCP_FLAGMASK_SYN | TCP_FLAGMASK_ACK))){
 					break;
 				}
+				/* grab remote's initial seq# */
+				cur->first_remote_seq = ntohl(tcp_head->seq_num);
 				copy_received_data_into_buffer(cur, tcp_head, tcp_len);
 
 				cur->cur_state = TCP_STATE_ESTABLISHED;
 				
-				//unblock all waiting connections
 				if(tcp_state.blocked.head)
-					PROC_unblock_all(&tcp_state.blocked);
+					PROC_unblock(&tcp_state.blocked, cur->proc_pid);
 
 				break;
 			case TCP_STATE_ESTABLISHED:
@@ -116,9 +118,9 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 					break;
 				}
 				copy_received_data_into_buffer(cur, tcp_head, tcp_len);
-				//unblock all waiting connections
+				
 				if(tcp_state.blocked.head)
-					PROC_unblock_all(&tcp_state.blocked);
+					PROC_unblock(&tcp_state.blocked, cur->proc_pid);
 
 				break;
 			case TCP_STATE_LASTACK:
@@ -127,9 +129,9 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 					break;
 				}
 				copy_received_data_into_buffer(cur, tcp_head, tcp_len);
-				//unblock all waiting connections
+				
 				if(tcp_state.blocked.head)
-					PROC_unblock_all(&tcp_state.blocked);
+					PROC_unblock(&tcp_state.blocked, cur->proc_pid);
 				
 				break;
 			default:
@@ -137,16 +139,15 @@ void handle_received_tcp_segment(ipv4_header *ip_head){
 				break;
 			}
 			
-			//unblock all waiting connections
-			if(tcp_state.blocked.head)
-				PROC_unblock_all(&tcp_state.blocked);
-			asm("STI");
+			/* //unblock all waiting connections */
+			/* if(tcp_state.blocked.head) */
+			/* 	PROC_unblock_all(&tcp_state.blocked); */
+			/* /\* asm("STI"); *\/ */
 			return;
 		}
 		
 		cur = cur->next;
 	}
-	asm("STI");
 	
 }
 
@@ -154,9 +155,10 @@ static tcp_connection *open_new_tcp_connection(ipv4_addr host, ipv4_addr remote,
 	/* create tcp_connection */
 	tcp_connection *new_connection = (tcp_connection*)kmalloc(sizeof(tcp_connection));
 
-	asm("CLI");
+	PROC_pushcli();
 	/* initialize created tcp_connection */
 	new_connection->connection_uid = tcp_state.next_connection_uid++;
+	new_connection->proc_pid = curProc->pid;
 	new_connection->cur_state = TCP_STATE_CLOSE;
 	new_connection->host_addr = host;
 	new_connection->remote_addr = remote;
@@ -178,12 +180,17 @@ static tcp_connection *open_new_tcp_connection(ipv4_addr host, ipv4_addr remote,
 	new_connection->fin_seen = 0;
 	new_connection->psh_seen = 0;
 
+	new_connection->total_data_received = 0;
+	new_connection->first_buffered = NULL;
+	new_connection->last_buffered  = NULL;
+	new_connection->num_buffers = 0;
+	
 	/* add new tcp_connection to the list of current tcp connections */
 	new_connection->next = tcp_state.connections;
 	tcp_state.connections = new_connection;
 	tcp_state.num_connections += 1;
 	
-	asm("STI");
+	PROC_popcli();
 
 	return new_connection;
 }
@@ -197,20 +204,26 @@ static void print_closing_connection_summary(tcp_connection *conn){
 	
 	printk("----------------------------------------------------------\n");
 	printk_info("Closing TCP Connection:    "); printk("%lu\n", conn->connection_uid);
-	printk_info("Host Machine Info:         "); printk("ip_addr = %lu, port = %lu\n", host_addr_buf, conn->host_port);
-	printk_info("Remote Machine Info:       "); printk("ip_addr = %lu, port = %lu\n", dest_addr_buf, conn->remote_port);
+	printk_info("Host Machine Info:         "); printk("ip_addr = %s, port = %lu\n", host_addr_buf, conn->host_port);
+	printk_info("Remote Machine Info:       "); printk("ip_addr = %s, port = %lu\n", dest_addr_buf, conn->remote_port);
 	printk_info("Data Receieved Stats:      "); printk("~%lu bytes received (remote started at seq# = %lu and ended at seq# %lu\n",
 							conn->highest_remote_seq - conn->first_remote_seq, conn->first_remote_seq, conn->highest_remote_seq);
 	printk_info("Host Window Size:          "); printk("%lu\n", conn->window_size);
 	printk_info("Connection Termination:    "); printk("%s\n", "clean");
 	printk_info("Remaining TCP Connections: "); printk("%d\n", tcp_state.num_connections);
+	printk_info("Data Received: \n");
+	tcp_buffered_data *cur = conn->first_buffered;
+	while(cur){
+		printk("%s", cur->data);
+		cur = cur->next;
+	}
 	printk("----------------------------------------------------------\n");
 	
 }
 
 static int close_tcp_connection(tcp_connection *conn_to_remove){
 	/* turn off interupts while we do this to keep tcp_state's connection list safe */
-	asm("CLI");
+	PROC_pushcli();
 
 	tcp_connection *cur, *last = NULL;
 	if((cur = tcp_state.connections) == NULL || tcp_state.num_connections == 0){
@@ -232,7 +245,17 @@ static int close_tcp_connection(tcp_connection *conn_to_remove){
 			
 			kfree(conn_to_remove);
 
-			asm("STI");
+			tcp_buffered_data *curbuff = conn_to_remove->first_buffered, *last;
+			while(curbuff){
+				if(curbuff->data){
+					kfree(curbuff->data);
+				}
+				last = curbuff;
+				curbuff = curbuff->next;
+				kfree(last);
+			}
+			
+			PROC_popcli();
 
 			return 0;
 		}
@@ -241,29 +264,18 @@ static int close_tcp_connection(tcp_connection *conn_to_remove){
 	}
 
 	printk_err("Attempted to close a connection that is not present in tcp_state's current connections...\n");
-	asm("STI");
+	PROC_popcli();
 	return 1;
 }
 
-static void block_until_tcp_received(tcp_connection *conn, int ints_back_on){
-	asm("CLI");
-	while(conn->new_data_avail == 0){
-		PROC_block_on(&tcp_state.blocked, 0);
-		asm("CLI");
+static void block_until_tcp_received(tcp_connection *conn, int timeout_len){
+	PROC_block_on_or_timeout(&tcp_state.blocked, 1);
+	if(conn->new_data_avail == 0){
+		printk_info("timed out\n");		
 	}
-
-	if(ints_back_on)
-		asm("STI");
-}
-
-static void wait_for_synack(tcp_connection *conn){
-	/* expecting ACK-SYN from server, block until we get it */
-	while(conn->cur_state != TCP_STATE_ESTABLISHED){
-		block_until_tcp_received(conn, 1);
+	else {
+		printk_info("data received\n");
 	}
-
-	/* ACK-SYN received */
-	conn->new_data_avail = 0;
 }
 
 /* void test_tcp_syn(){ */
@@ -307,18 +319,30 @@ static void perform_tcp_handshake(tcp_connection *conn){
 	uint8_t *tcp_frame;
 	int tcp_frame_len;
 	tcp_flags flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 0, .psh = 0, .rst = 0, .syn = 1, .fin = 0};
-
+	int num_tries = 0;
+	
 	/* send SYN request to server, move to STATE_SYNSENT */
 	//printk_info("sending syn to server\n");
 	conn->cur_state = TCP_STATE_SYNSENT;
 	
-	tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame);
-	rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
-
-
 	/* wait for synack, rx_networking_thread will move us to STATE_ESTABLISHED once received */
-	//printk_info("waiting for synack\n");
-	wait_for_synack(conn);
+	while(1){
+		printk_info("sending syn %d\n", num_tries + 1);
+		
+		tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame);
+		rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
+
+		block_until_tcp_received(conn, 1);
+
+		if(conn->cur_state == TCP_STATE_ESTABLISHED)
+			break;
+		
+		if(++num_tries > 3){
+			printk_warn("tcp connection %d timed out during TCP handshake\n", conn->proc_pid);
+		        PROC_pushcli();
+			asm("HLT");
+		}
+	}
 	
 	/* sending ACK back to server */
 	flags.syn = 0;
@@ -330,7 +354,6 @@ static void perform_tcp_handshake(tcp_connection *conn){
 	//printk_info("connection established\n");
 	
 }
-
 
 static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new_tcp_head, uint64_t tcp_len){
 	tcp_flags recvd_flags = get_flags(new_tcp_head);
@@ -354,7 +377,7 @@ static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new
 	
 	if((recvd_seq + data_len) <= conn->highest_remote_seq){
 		printk_warn("already received all of this data, doing nothing\n");
-		printk_warn("recvd_seq = %lu, data_len = %lu, conn->highest_remote_seq = %lu", recvd_seq, data_len, conn->highest_remote_seq);
+		printk_warn("recvd_seq = %lu, data_len = %lu, conn->highest_remote_seq = %lu\n", recvd_seq, data_len, conn->highest_remote_seq);
 	}
 	else {
 		conn->highest_remote_seq = recvd_seq > conn->highest_remote_seq ? recvd_seq : conn->highest_remote_seq;
@@ -362,7 +385,7 @@ static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new
 			uint8_t *data_begin = ((uint8_t*)new_tcp_head) + (data_offset * 4);
 			uint8_t *new_data_begin = data_begin + (conn->highest_remote_seq - recvd_seq);
 			
-			while((new_data_begin < (data_begin + data_len - 1)) && (conn->received_top < (conn->received + IPV4_DATA_LEN - 1))){
+			while((new_data_begin < (data_begin + data_len - 1)) && (conn->received_top < (conn->received + (IPV4_DATA_LEN * 5) - 1))){
 				*(conn->received_top++) = *(new_data_begin++);
 				conn->highest_remote_seq += 1;
 			}
@@ -380,8 +403,6 @@ static void copy_received_data_into_buffer(tcp_connection *conn, tcp_header *new
 }
 
 static uint64_t tcp_wait_for_data_and_handle(tcp_connection *conn){
-	uint64_t total_data_received = 0;
-	
 	uint8_t *tcp_frame;
 	int tcp_frame_len;
 	tcp_flags flags = {.ns = 0, .cwr = 0, .ece = 0, .urg = 0, .ack = 1, .psh = 0, .rst = 0, .fin = 0};
@@ -391,40 +412,59 @@ static uint64_t tcp_wait_for_data_and_handle(tcp_connection *conn){
 		/* wait for data from remote */
 		block_until_tcp_received(conn, 1);
 		
-		/* handle buffered data 
-		 * TODO: replace with buffer write if possible (to disk??) */
+		/* handle buffered data */
 		if(conn->new_data_avail){
-			uint8_t *data_walker = conn->received;
+			PROC_pushcli();
+			uint64_t received_data_len = (uint64_t)(conn->received_top - conn->received);
+			
+			tcp_buffered_data *new_buff = (tcp_buffered_data*)kmalloc(sizeof(tcp_buffered_data));
+			new_buff->seq_num_begin = 0;
+			new_buff->seq_num_end = 0;
+			new_buff->data = (uint8_t*)kmalloc(sizeof(uint8_t*) * received_data_len + 1);
+			new_buff->data_len = received_data_len;
+			new_buff->next = NULL;
+
+			uint8_t *data_walker = conn->received, *buffer_walker = new_buff->data;
 			while(data_walker < conn->received_top){
-				printk("%c", *(data_walker++));
-				total_data_received += 1;
+				*(buffer_walker++) = *(data_walker++);
+				conn->total_data_received += 1;
 			}
+			*buffer_walker = 0;
+
+			if(!(conn->first_buffered)){
+				conn->last_buffered = conn->first_buffered = new_buff; 
+			}
+			else {
+				conn->last_buffered->next = new_buff;
+				conn->last_buffered = new_buff;
+			}
+			conn->num_buffers += 1;
 			
 			//reset the buffer
 			conn->received_top = conn->received;
 			conn->new_data_avail = 0;
 
+			PROC_popcli();
 			/* todo might need to add logic in the case that there is no data sent but fin is received */
 			if(conn->fin_seen){
 				conn->cur_state = TCP_STATE_CLOSEWAIT;
-				asm("STI");
 				break;
 			}
-
-			asm("STI");
+			
 			/* ack the received data */
 			tcp_frame_len = create_tcp_segment(conn, (sizeof(tcp_header) /  4), flags, 0, NULL, 0, &tcp_frame);
 			rtl8139_transmit_packet(tcp_frame, tcp_frame_len);
+
 		}
 
 		if(conn->fin_seen){
 			conn->cur_state = TCP_STATE_CLOSEWAIT;
-			asm("STI");
+		        //PROC_popcli();
 			break;
 		}
 	}
 
-        return total_data_received;
+        return conn->total_data_received;
 }
 
 static int tcp_perform_term_handshake(tcp_connection *conn){
@@ -448,6 +488,7 @@ static int tcp_perform_term_handshake(tcp_connection *conn){
 
 	/* case: other device has initiated the the tcp connection termination handshake */
 	else if(conn->cur_state == TCP_STATE_CLOSEWAIT){
+		
 		/* send ACK */
 		conn->highest_remote_seq += 1;
 		
@@ -465,8 +506,7 @@ static int tcp_perform_term_handshake(tcp_connection *conn){
 		block_until_tcp_received(conn, 1);
 		conn->cur_state = TCP_STATE_CLOSE;
 
-		asm("STI");
-		
+		/* PROC_popcli(); */
 	}
 	else {
 		printk_err("you are currently in state = %d, doesn't make sense for performing tcp termination handshake\n", conn->cur_state);
@@ -510,7 +550,7 @@ void establish_tcp_connection(void *params){
 	}
 	dest_port = (uint16_t)paramArr[4];
 
-	uint16_t win_size = IPV4_DATA_LEN - sizeof(tcp_header) - 20; //don't want more than one packet coming in at a time
+	uint16_t win_size = ((IPV4_DATA_LEN - sizeof(tcp_header)) * 5) - 20; //don't want more than one packet coming in at a time
 
 	tcp_connection *connection = open_new_tcp_connection(src, dest, src_port, dest_port, win_size);
 

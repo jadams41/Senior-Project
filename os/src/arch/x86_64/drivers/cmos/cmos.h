@@ -3,6 +3,7 @@
 #define _CMOS_H
 
 #include <stdint-gcc.h>
+#include "types/process.h"
 #include "types/timing.h"
 
 /* CMOS memory-mapped ports */
@@ -89,6 +90,19 @@ enum RTC_periodic_int_rate {
 #define RTC_RATE_FASTEST RTC_ClockRate8kHz
 #define RTC_RATE_SLOWEST RTC_ClockRate2Hz
 
+typedef struct pending_timeout pending_timeout;
+struct pending_timeout {
+	int pid;
+	int seconds;
+
+        uint64_t ints_start; //number of interrupts received when timeout set
+	uint64_t ints_done;   //number of interrupts received when timeout should unblock
+	
+	ProcessQueue *blocked_on;
+
+	pending_timeout *next;
+};
+
 typedef struct rtc_interrupt_state rtc_interrupt_state; 
 struct rtc_interrupt_state {
 	/* rtc configuration information */
@@ -102,17 +116,24 @@ struct rtc_interrupt_state {
 	uint8_t rate;
 	uint32_t interrupts_per_sec;
 	uint64_t ints_received;
-
+	
 	int enabled;
 
+	/* keep track of processes to unblock after timeout */
+	pending_timeout *timeouts;
+	
 	/* statistics */
 	int read_cur_rtc_retries;
 	
 };
 
-
+void clear_timeouts_for_pid(int pid);
 void rtc_timer_isr(int irq, int err);
 void CMOS_initialize_rtc_periodic_interrupts(RTC_periodic_int_rate rate);
 void print_current_time_and_date_from_rtc();
+
+/* set and control timeouts */
+void set_timeout_for_process(ProcessQueue *pq, int pid, int timeout_secs);
+
 
 #endif

@@ -79,17 +79,21 @@ enum tcp_client_state {
 #define FIRST_DYNAMIC_PORT 49152
 #define LAST_DYNAMIC_PORT  65535
 
-typedef struct tcp_recv_buf tcp_recv_buf;
-struct tcp_recv_buf {
-	uint64_t new_data_avail; //0 if no new data available, otherwise length of received data
-	uint8_t received[IPV4_DATA_LEN];
+typedef struct tcp_buffered_data tcp_buffered_data;
+struct tcp_buffered_data {
+	int seq_num_begin;
+	int seq_num_end;
 
-	tcp_recv_buf *next;
+	uint8_t *data;
+	uint64_t data_len;
+
+	tcp_buffered_data *next;
 };
 
 typedef struct tcp_connection tcp_connection;
 struct tcp_connection {
 	uint64_t connection_uid;
+	int proc_pid;
 	enum tcp_client_state cur_state;
 
 	ipv4_addr host_addr;
@@ -101,7 +105,7 @@ struct tcp_connection {
 	uint16_t window_size;
 
 	uint8_t new_data_avail;
-	uint8_t received[IPV4_DATA_LEN];
+	uint8_t received[IPV4_DATA_LEN * 5];
 	uint8_t *received_top;
 
 	seq_number first_host_seq;
@@ -112,6 +116,11 @@ struct tcp_connection {
 
 	int fin_seen;
 	int psh_seen;
+
+	uint64_t total_data_received;
+	tcp_buffered_data *first_buffered;
+	tcp_buffered_data *last_buffered;
+	int num_buffers;
 	
 	tcp_connection *next;
 };
